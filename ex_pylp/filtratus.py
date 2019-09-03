@@ -67,14 +67,24 @@ class Filtratus:
         #TODO remove unused words from doc_obj['words']
 
 
-class PunctFiltratus(Filtratus):
+class PunctAndUndefFiltratus(Filtratus):
     def _filter(self, word_obj, word_pos, sent, word_strings):
-        if word_obj.get(Attr.POS_TAG, PosTag.UNDEF) == PosTag.UNDEF and \
+        if word_obj.get(Attr.POS_TAG, PosTag.UNDEF) in (PosTag.UNDEF, PosTag.PUNCT) and \
            word_obj.get(Attr.SYNTAX_LINK_NAME, SyntLink.PUNCT) == SyntLink.PUNCT:
             return True
         return False
 
-class StopWordsFiltratus(PunctFiltratus):
+class DeterminatusFiltratus(PunctAndUndefFiltratus):
+    def _filter(self, word_obj, word_pos, sent, word_strings):
+        filtered = super(DeterminatusFiltratus, self)._filter(word_obj, word_pos,
+                                                              sent, word_strings)
+        if filtered:
+            return True
+        if word_obj[Attr.POS_TAG] == PosTag.DET:
+            return True
+        return False
+
+class StopWordsFiltratus(PunctAndUndefFiltratus):
     def _filter(self, word_obj, word_pos, sent, word_strings):
         filtered = super(StopWordsFiltratus, self)._filter(word_obj, word_pos, sent, word_strings)
         if filtered:
@@ -85,4 +95,4 @@ class StopWordsFiltratus(PunctFiltratus):
 
 def create_filtratus():
     #TODO factory
-    return PunctFiltratus()
+    return DeterminatusFiltratus()
