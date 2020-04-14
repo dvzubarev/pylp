@@ -156,6 +156,7 @@ WORD_ASPECT_DICT = _make_dict_for_enum(WordAspect)
 class WordVoice(enum.IntEnum):
     ACT  = 0
     PASS = 1
+    MID = 2
 WORD_VOICE_DICT = _make_dict_for_enum(WordVoice)
 
 class WordAnimacy(enum.IntEnum):

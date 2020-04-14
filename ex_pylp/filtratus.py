@@ -131,22 +131,22 @@ class NumAndUndefLangFiltratus(StopWordsFiltratus):
         if word_lang == Lang.UNDEF:
             return True
 
-        #by aot
+        #Do not use aot by now
         # PosTag.NUM  - имя числительное,   PosTag.NUMBER - число
-        if word_lang == Lang.RU:
-            if word_obj[Attr.POS_TAG] == PosTag.NUMBER:
-                return True
-        else:
-            #but by UD PosTag.NUM is any number? and PosTag.NUMBER is not used
-            if word_obj[Attr.POS_TAG] == PosTag.NUM:
-                return True
+        # if word_lang == Lang.RU:
+        #     if word_obj[Attr.POS_TAG] == PosTag.NUMBER:
+        #         return True
+        # else:
+        #but by UD PosTag.NUM is any number? and PosTag.NUMBER is not used
+        if word_obj[Attr.POS_TAG] == PosTag.NUM:
+            return True
 
         return False
 
 
 def create_filtratus(kind = '', **kwargs):
     if not kind:
-        return DeterminatusFiltratus(**kwargs)
+        return StopWordsFiltratus(**kwargs)
     if kind == 'punct':
         return PunctAndUndefFiltratus(**kwargs)
     if kind == 'determiner':
@@ -157,3 +157,18 @@ def create_filtratus(kind = '', **kwargs):
         return NumAndUndefLangFiltratus(**kwargs)
 
     raise RuntimeError("Unknown filtratus kind: %s" % kind)
+
+def cast_filtratus(filt, kind = ''):
+    if not kind:
+        return filt
+
+    if kind == 'punct':
+        filt.__class__ = PunctAndUndefFiltratus
+    elif kind == 'determiner':
+        filt.__class__ = DeterminatusFiltratus
+    elif kind == 'stopwords':
+        filt.__class__ = StopWordsFiltratus
+    elif kind == 'num&undeflang':
+        filt.__class__ = NumAndUndefLangFiltratus
+
+    return filt
