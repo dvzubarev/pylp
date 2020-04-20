@@ -33,8 +33,8 @@ class Filtratus:
                 continue
             new_pos = new_positions[old_pos]
 
-            old_parent_offs = new_sent[new_pos].get(Attr.SYNTAX_PARENT, -1)
-            if old_parent_offs == -1:
+            old_parent_offs = new_sent[new_pos].get(Attr.SYNTAX_PARENT)
+            if old_parent_offs is None:
                 #this is root or no link
                 continue
             old_parent_pos = old_pos + old_parent_offs
