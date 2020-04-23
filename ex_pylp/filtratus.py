@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import logging
+
 from ex_pylp.common import Attr
 from ex_pylp.common import PosTag
 from ex_pylp.common import Lang
@@ -15,8 +17,13 @@ class FiltratusContext:
 class Filtratus:
     """http://www.filtratus.com
     """
-    def _filter(self, word_obj, word_pos, sent, ctx):
-        raise NotImplementedError ("!")
+    def __init__(self, kinds, filters_kwargs):
+        self._filters = {}
+        for k in kinds:
+            kwargs = {}
+            if k in filters_kwargs:
+                kwargs = filters_kwargs[k]
+            self._filters[k] = create_filtratus(k, **kwargs)
 
     def _adjust_syntax_links(self, new_sent, old_sent, new_positions):
         """Example:
@@ -54,7 +61,7 @@ class Filtratus:
 
 
 
-    def __call__(self, doc_obj):
+    def __call__(self, kinds, doc_obj):
         new_sents = []
         ctx = FiltratusContext(doc_obj)
         for sent in doc_obj['sents']:
@@ -62,7 +69,16 @@ class Filtratus:
             new_positions = []
             cur_pos = 0
             for word_pos, word_obj in enumerate(sent):
-                if self._filter(word_obj, word_pos, sent, ctx):
+                filtered = False
+                for k in kinds:
+                    if k not in self._filters:
+                        raise RuntimeError("Filter %s is not loaded!" % k)
+
+                    filtered = self._filters[k].filter(word_obj, word_pos, sent, ctx)
+                    if filtered:
+                        break
+
+                if filtered:
                     new_positions.append(-1)
                 else:
                     new_sent.append(word_obj)
@@ -75,27 +91,32 @@ class Filtratus:
         #TODO remove unused words from doc_obj['words']
 
 
-class PunctAndUndefFiltratus(Filtratus):
-    def _filter(self, word_obj, word_pos, sent, ctx):
+class AbcFilter:
+    def filter(self, word_obj, word_pos, sent, ctx):
+        raise NotImplementedError("ABC")
+
+class PunctAndUndefFiltratus(AbcFilter):
+    name = 'punct'
+    def filter(self, word_obj, word_pos, sent, ctx):
         if word_obj.get(Attr.POS_TAG, PosTag.UNDEF) in (PosTag.UNDEF, PosTag.PUNCT) and \
            word_obj.get(Attr.SYNTAX_LINK_NAME, SyntLink.PUNCT) == SyntLink.PUNCT:
             return True
         return False
 
-class DeterminatusFiltratus(PunctAndUndefFiltratus):
-    def _filter(self, word_obj, word_pos, sent, ctx):
-        filtered = super(DeterminatusFiltratus, self)._filter(word_obj, word_pos, sent, ctx)
-        if filtered:
-            return True
+class DeterminatusFiltratus(AbcFilter):
+    name = 'determiner'
+    def filter(self, word_obj, word_pos, sent, ctx):
         if word_obj[Attr.POS_TAG] == PosTag.DET:
             return True
         return False
 
-class StopWordsFiltratus(DeterminatusFiltratus):
+class StopWordsFiltratus(AbcFilter):
+    name = 'stopwords'
     def __init__(self, stop_words_list_path = ''):
         if stop_words_list_path:
             with open(stop_words_list_path, 'r') as f:
                 self._stop_words = frozenset(int(l.strip(), 16) for l in f)
+                logging.info("Loaded %d stopwords", len(self._stop_words))
         else:
             self._stop_words = []
 
@@ -103,11 +124,7 @@ class StopWordsFiltratus(DeterminatusFiltratus):
                                     PosTag.AUX, PosTag.SCONJ, PosTag.CCONJ, PosTag.SYM])
 
 
-    def _filter(self, word_obj, word_pos, sent, ctx):
-        filtered = super(StopWordsFiltratus, self)._filter(word_obj, word_pos, sent, ctx)
-        if filtered:
-            return True
-
+    def filter(self, word_obj, word_pos, sent, ctx):
         if word_obj.get(Attr.STOP_WORD_TYPE, 0) > 0:
             return True
 
@@ -121,12 +138,9 @@ class StopWordsFiltratus(DeterminatusFiltratus):
 
         return False
 
-class NumAndUndefLangFiltratus(StopWordsFiltratus):
-    def _filter(self, word_obj, word_pos, sent, ctx):
-        filtered = super(NumAndUndefLangFiltratus, self)._filter(word_obj, word_pos, sent, ctx)
-        if filtered:
-            return True
-
+class NumAndUndefLangFiltratus(AbcFilter):
+    name = 'num&undeflang'
+    def filter(self, word_obj, word_pos, sent, ctx):
         word_lang = word_obj.get(Attr.LANG, ctx.doc_lang)
         if word_lang == Lang.UNDEF:
             return True
@@ -145,30 +159,13 @@ class NumAndUndefLangFiltratus(StopWordsFiltratus):
 
 
 def create_filtratus(kind = '', **kwargs):
-    if not kind:
-        return StopWordsFiltratus(**kwargs)
-    if kind == 'punct':
+    if kind == PunctAndUndefFiltratus.name:
         return PunctAndUndefFiltratus(**kwargs)
-    if kind == 'determiner':
+    if kind == DeterminatusFiltratus.name:
         return DeterminatusFiltratus(**kwargs)
-    if kind == 'stopwords':
+    if kind == StopWordsFiltratus.name:
         return StopWordsFiltratus(**kwargs)
-    if kind == 'num&undeflang':
+    if kind == NumAndUndefLangFiltratus.name:
         return NumAndUndefLangFiltratus(**kwargs)
 
     raise RuntimeError("Unknown filtratus kind: %s" % kind)
-
-def cast_filtratus(filt, kind = ''):
-    if not kind:
-        return filt
-
-    if kind == 'punct':
-        filt.__class__ = PunctAndUndefFiltratus
-    elif kind == 'determiner':
-        filt.__class__ = DeterminatusFiltratus
-    elif kind == 'stopwords':
-        filt.__class__ = StopWordsFiltratus
-    elif kind == 'num&undeflang':
-        filt.__class__ = NumAndUndefLangFiltratus
-
-    return filt

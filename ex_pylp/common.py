@@ -189,3 +189,6 @@ class Attr:
     LENGTH           = 'S'
     ROLES            = 'r'
     RELS             = 'e'
+    PREP_MOD         = 'M'
+    #TEMP
+    PREP_WHITE_LIST  = 'W'
