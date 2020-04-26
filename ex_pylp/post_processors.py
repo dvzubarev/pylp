@@ -49,9 +49,6 @@ class PrepositionCompressor(AbcPostProcessor):
                     continue
                 head_pos = pos + head_offs
                 head_obj = sent[head_pos]
-                #TEMP
-                if Attr.PREP_MOD in head_obj:
-                    logging.warning("Unexpected situation!")
 
                 head_obj[Attr.PREP_MOD] = wobj[Attr.WORD_NUM]
                 if word_ids[wobj[Attr.WORD_NUM]] in self._prep_whitelist:
