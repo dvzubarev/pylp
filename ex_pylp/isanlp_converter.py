@@ -3,6 +3,7 @@
 
 import collections
 
+from ex_pylp.utils import make_words_dict
 from ex_pylp.common import Attr
 from ex_pylp.common import PosTag
 import ex_pylp.common as pylp
@@ -141,23 +142,12 @@ class TokensConv:
         return [(Attr.OFFSET, offs), (Attr.LENGTH, size)]
 
 
-def make_lemmas_dict(lemmas):
-    d = {}
-    flatten_lemmas = []
-    for sent in lemmas:
-        for l in sent:
-            if l not in d:
-                d[l] = len(flatten_lemmas)
-                flatten_lemmas.append(l)
-
-    return flatten_lemmas, d
-
 
 def convert_to_json(annotations, calc_stat = False):
     result = {}
     result['lang'] = convert_lang(annotations['lang'])
 
-    flatten_lemmas, lemmas_dict = make_lemmas_dict(annotations['lemma'])
+    flatten_lemmas, lemmas_dict = make_words_dict(annotations['lemma'])
     result['words'] = flatten_lemmas
 
     converters = [
