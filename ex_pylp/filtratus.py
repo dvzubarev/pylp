@@ -15,8 +15,8 @@ class FiltratusContext:
         self.doc_lang = doc['lang']
 
 class Filtratus:
-    """http://www.filtratus.com
-    """
+    name = "filtratus"
+
     def __init__(self, kinds, filters_kwargs):
         self._filters = {}
         for k in kinds:
@@ -61,7 +61,7 @@ class Filtratus:
 
 
 
-    def __call__(self, kinds, doc_obj):
+    def __call__(self, text, doc_obj, kinds):
         new_sents = []
         ctx = FiltratusContext(doc_obj)
         for sent in doc_obj['sents']:
