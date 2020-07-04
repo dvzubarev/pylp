@@ -139,3 +139,21 @@ def test_max_chars(fragments_maker):
     assert fragments[0] == (0, 1)
     assert fragments[1] == (2, 2)
     assert fragments[2] == (3, 4)
+
+
+    doc = {
+        'words': ['normal',
+                  'sentence',
+                  'here',
+                  'a' * 100],
+        'sents': [
+            [{Attr.WORD_NUM: 3}],
+            [{Attr.WORD_NUM: 0}, {Attr.WORD_NUM: 1}, {Attr.WORD_NUM: 2}],
+            [{Attr.WORD_NUM: 0}, {Attr.WORD_NUM: 1}, {Attr.WORD_NUM: 2}],
+        ]
+    }
+    fragments_maker('', doc, max_fragment_length = 4, max_chars_cnt = 40,
+                    min_sent_length = 2, overlap = 2)
+
+    fragments = doc['fragments']
+    assert len(fragments) == 2
