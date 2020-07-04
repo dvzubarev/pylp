@@ -2,7 +2,6 @@
 # coding: utf-8
 
 import logging
-import enum
 
 from ex_pylp.filtratus import Filtratus
 from ex_pylp.common import Attr
@@ -15,6 +14,7 @@ class PostProcessor:
         for k in kinds:
             kwargs = proc_kwargs.get(k, {})
             self._procs[k] = create_postprocessor(k, **kwargs)
+            logging.info("Loading %s postprocessor!", k)
 
     def __call__(self, kinds, text, doc_obj, **proc_params):
         for k in kinds:
@@ -34,10 +34,6 @@ def create_postprocessor(kind, **kwargs):
         return FragmentsMaker(**kwargs)
     raise RuntimeError("Unknown postprocessor: %s" % kind)
 
-
-class Order(enum.IntEnum):
-    BEFORE_FILTRATUS = 0
-    AFTER_FILTRATUS = 0
 
 class AbcPostProcessor:
     def __call__(self, text, doc_obj):
@@ -73,6 +69,43 @@ class FragmentsMaker(AbcPostProcessor):
     def __init__(self):
         pass
 
-    def __call__(self, text, doc_obj, fragment_length = 20, min_sent_length = 4, overlap = 2):
-        for sent in doc_obj['sents']:
-            pass
+    def _sent_chars_cnt(self, doc_obj, sent):
+        return sum(len(doc_obj['words'][wobj[Attr.WORD_NUM]]) for wobj in sent)
+
+    def __call__(self, text, doc_obj, max_fragment_length = 20,
+                 max_chars_cnt = 5_000, min_sent_length = 4, overlap = 2):
+        good_sents = []
+        fragments = []
+        fragment_size = 0
+        fragment_chars_cnt = 0
+        fragment_begin_no = 0
+
+        num = -1
+        for num, sent in enumerate(doc_obj['sents']):
+            if max_chars_cnt:
+                fragment_chars_cnt += self._sent_chars_cnt(doc_obj, sent)
+
+            if len(sent) >= min_sent_length:
+                fragment_size += 1
+                good_sents.append(num)
+
+            if fragment_size >= max_fragment_length or \
+               (max_chars_cnt and fragment_chars_cnt > max_chars_cnt):
+
+                fragments.append((fragment_begin_no, num))
+                if overlap and good_sents[-min(overlap, len(good_sents))] > fragment_begin_no:
+                    fragment_begin_no = good_sents[-overlap]
+                else:
+                    fragment_begin_no = num + 1
+
+                fragment_size = overlap
+                if max_chars_cnt:
+                    fragment_chars_cnt = sum(self._sent_chars_cnt(doc_obj, s)
+                                             for s in doc_obj['sents'][fragment_begin_no:num+1])
+
+
+        if num != -1 and fragment_begin_no < len(doc_obj['sents']):
+            fragments.append((fragment_begin_no, len(doc_obj['sents']) - 1))
+
+        logging.debug("created %d fragments", len(fragments))
+        doc_obj['fragments'] = fragments
