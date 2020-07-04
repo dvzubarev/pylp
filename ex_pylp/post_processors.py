@@ -95,7 +95,7 @@ class FragmentsMaker(AbcPostProcessor):
                 fragments.append((fragment_begin_no, num))
                 if overlap and good_sents and \
                    good_sents[-min(overlap, len(good_sents))] > fragment_begin_no:
-                    fragment_begin_no = good_sents[-overlap]
+                    fragment_begin_no = good_sents[-min(overlap, len(good_sents))]
                 else:
                     fragment_begin_no = num + 1
 
