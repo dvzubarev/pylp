@@ -8,6 +8,8 @@ from ex_pylp.common import PosTag
 from ex_pylp.common import Lang
 from ex_pylp.common import SyntLink
 
+from ex_pylp.utils import adjust_syntax_links
+
 class FiltratusContext:
     def __init__(self, doc):
         self.word_strings = doc['words']
@@ -25,37 +27,6 @@ class Filtratus:
                 kwargs = filters_kwargs[k]
             self._filters[k] = create_filtratus(k, **kwargs)
 
-    def _adjust_syntax_links(self, new_sent, old_sent, new_positions):
-        """Example:
-        old_sent: ['word', ',', 'word2', ':', 'word3']
-        new_sent: ['word', 'word2', 'word3']
-        new_positions: [0, -1, 1, -1, 2]
-
-        word links with word2
-        word2 links with word3
-        """
-        for old_pos, old_word in enumerate(old_sent):
-            if new_positions[old_pos] == -1:
-                #this word does not exist anymore
-                continue
-            new_pos = new_positions[old_pos]
-
-            old_parent_offs = new_sent[new_pos].get(Attr.SYNTAX_PARENT)
-            if old_parent_offs is None:
-                #this is root or no link
-                continue
-            old_parent_pos = old_pos + old_parent_offs
-
-            new_parent_pos = new_positions[old_parent_pos]
-            if new_parent_pos == -1:
-                #parent does not exist
-                if Attr.SYNTAX_LINK_NAME in new_sent[new_pos]:
-                    del new_sent[new_pos][Attr.SYNTAX_LINK_NAME]
-                if Attr.SYNTAX_PARENT in new_sent[new_pos]:
-                    del new_sent[new_pos][Attr.SYNTAX_PARENT]
-
-            else:
-                new_sent[new_pos][Attr.SYNTAX_PARENT] = new_parent_pos - new_pos
 
 
 
@@ -85,7 +56,7 @@ class Filtratus:
                     new_positions.append(cur_pos)
                     cur_pos += 1
             if len(new_sent) != len(sent):
-                self._adjust_syntax_links(new_sent, sent, new_positions)
+                adjust_syntax_links(new_sent, sent, new_positions)
             new_sents.append(new_sent)
         doc_obj['sents'] = new_sents
         #TODO remove unused words from doc_obj['words']
