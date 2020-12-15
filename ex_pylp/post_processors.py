@@ -105,8 +105,11 @@ class FragmentsMaker(AbcPostProcessor):
                                              for s in doc_obj['sents'][fragment_begin_no:num+1])
 
 
-        if num != -1 and fragment_begin_no < len(doc_obj['sents']):
-            fragments.append((fragment_begin_no, len(doc_obj['sents']) - 1))
+
+        end = len(doc_obj['sents']) - 1
+        cur_end = fragments[-1][1] if fragments else -1
+        if num != -1  and fragment_begin_no <= end and cur_end != end:
+            fragments.append((fragment_begin_no, end))
 
         logging.debug("created %d fragments", len(fragments))
         doc_obj['fragments'] = fragments
