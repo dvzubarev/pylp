@@ -17,12 +17,14 @@ class LemmaConv:
 
 class SyntConv(conv.SyntConv):
     def __call__(self, pos, word_synt):
-        return super(SyntConv, self).__call__(pos, word_synt.parent, word_synt.link_name)
+        if word_synt is not None:
+            return super().__call__(pos, word_synt.parent, word_synt.link_name)
+        return None
 
 class MorphConv(conv.MorphConv):
     def __call__(self, pos, morph_feats):
         tag = morph_feats.get('fPOS', '')
-        return super(MorphConv, self).__call__(pos, tag, morph_feats)
+        return super().__call__(pos, tag, morph_feats)
 
 
 class TokensConv:
@@ -32,7 +34,7 @@ class TokensConv:
 
 
 
-def convert_to_json(annotations, calc_stat = False):
+def convert_to_json(annotations, calc_stat = False, analyze_opts:dict={}):
     result = {}
     result['lang'] = conv.convert_lang(annotations['lang'])
 
@@ -40,11 +42,19 @@ def convert_to_json(annotations, calc_stat = False):
     result['words'] = flatten_lemmas
 
     converters = [
-        ('lemma', LemmaConv(lemmas_dict)),
-        ('syntax_dep_tree', SyntConv(calc_stat = calc_stat)),
-        ('morph', MorphConv(calc_stat = calc_stat)),
-        ('tokens', TokensConv())
+        ('tokens', TokensConv()),
     ]
+    if analyze_opts.get('tagger', '') != 'none':
+        converters.extend([
+            ('lemma', LemmaConv(lemmas_dict)),
+            ('morph', MorphConv(calc_stat = calc_stat)),
+        ])
+
+    if analyze_opts.get('parser', '') != 'none':
+        converters.append(
+            ('syntax_dep_tree', SyntConv(calc_stat = calc_stat)),
+        )
+
     all_facets = [annotations[item[0]] for item in converters]
 
     #TODO check that sents have the same size for all facets

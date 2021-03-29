@@ -72,7 +72,10 @@ class MorphConv:
     def __call__(self, pos, tag, morph_feats):
         fields = []
         if tag:
-            pos_tag = pylp.POS_TAG_DICT[tag]
+            if tag == '_':
+                pos_tag = pylp.PosTag.UNDEF
+            else:
+                pos_tag = pylp.POS_TAG_DICT[tag]
             fields.append((Attr.POS_TAG, pos_tag))
             if pos_tag == PosTag.VERB:
                 self._adjust_verb(morph_feats, fields)
