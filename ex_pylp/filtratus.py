@@ -22,15 +22,7 @@ class Filtratus:
     def __init__(self, kinds, filters_kwargs):
         self._filters = {}
         for k in kinds:
-            kwargs = {}
-            if k in filters_kwargs:
-                kwargs = filters_kwargs[k]
-            self._filters[k] = create_filtratus(k, **kwargs)
-
-
-
-
-
+            self._filters[k] = create_filtratus(k, **filters_kwargs)
 
     def __call__(self, text, doc_obj, kinds):
         new_sents = []
@@ -63,6 +55,8 @@ class Filtratus:
 
 
 class AbcFilter:
+    def __init__(self, **kwargs):
+        pass
     def filter(self, word_obj, word_pos, sent, ctx):
         raise NotImplementedError("ABC")
 
@@ -83,23 +77,40 @@ class DeterminatusFiltratus(AbcFilter):
 
 class StopWordsFiltratus(AbcFilter):
     name = 'stopwords'
-    def __init__(self, stop_words_list_path = ''):
-        if stop_words_list_path:
-            with open(stop_words_list_path, 'r') as f:
-                self._stop_words = frozenset(int(l.strip(), 16) for l in f)
-                logging.info("Loaded %d stopwords", len(self._stop_words))
-        else:
-            self._stop_words = []
+    def __init__(self, sw_pos_tags = None,
+                 sw_list_path = '', sw_white_list_path = '', **kwargs):
+        def load_words_list(p):
+            if p:
+                with open(p, 'r') as f:
+                    return frozenset(int(l.strip(), 16) for l in f)
+            else:
+                return []
 
-        self._sw_POSes = frozenset([PosTag.ADP, PosTag.CONJ, PosTag.PART, PosTag.PRON,
-                                    PosTag.AUX, PosTag.SCONJ, PosTag.CCONJ, PosTag.SYM])
+        super().__init__(**kwargs)
+
+
+        self._stop_words = load_words_list(sw_list_path)
+        logging.info("Loaded %d stopwords", len(self._stop_words))
+        self._white_list = load_words_list(sw_white_list_path)
+        logging.info("Loaded %d words from white list", len(self._white_list))
+
+        if sw_pos_tags is None:
+            self._sw_pos_tags = frozenset([PosTag.ADP, PosTag.CONJ, PosTag.PART, PosTag.PRON,
+                                           PosTag.AUX, PosTag.SCONJ, PosTag.CCONJ, PosTag.SYM])
+        else:
+            self._sw_pos_tags = frozenset(sw_pos_tags)
 
 
     def filter(self, word_obj, word_pos, sent, ctx):
+        if self._white_list and \
+           ctx.word_ids[word_obj[Attr.WORD_NUM]] in self._white_list:
+            return False
+
+        #for aot/previous version of textapp compat
         if word_obj.get(Attr.STOP_WORD_TYPE, 0) > 0:
             return True
 
-        if word_obj[Attr.POS_TAG] in self._sw_POSes:
+        if word_obj[Attr.POS_TAG] in self._sw_pos_tags:
             return True
 
         if self._stop_words and \

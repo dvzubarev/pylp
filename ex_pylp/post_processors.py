@@ -42,7 +42,9 @@ class AbcPostProcessor:
 class PrepositionCompressor(AbcPostProcessor):
     name = "preposition_compressor"
     def __init__(self):
-        self._prep_whitelist = frozenset([18370182862529888470])
+        self._prep_whitelist = frozenset([
+            18370182862529888470, #of
+        ])
 
     def __call__(self, text, doc_obj):
         for s in doc_obj['sents']:
