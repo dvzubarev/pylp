@@ -34,7 +34,9 @@ class TokensConv:
 
 
 
-def convert_to_json(annotations, calc_stat = False, analyze_opts:dict={}):
+def convert_to_json(annotations, calc_stat = False, analyze_opts:dict=None):
+    if analyze_opts is None:
+        analyze_opts = {}
     result = {}
     result['lang'] = conv.convert_lang(annotations['lang'])
 
