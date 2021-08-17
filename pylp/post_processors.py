@@ -3,10 +3,10 @@
 
 import logging
 
-from ex_pylp.filtratus import Filtratus
-from ex_pylp.common import Attr
-from ex_pylp.common import PosTag
-from ex_pylp.common import SyntLink
+from pylp.filtratus import Filtratus
+from pylp.common import Attr
+from pylp.common import PosTag
+from pylp.common import SyntLink
 
 class PostProcessor:
     def __init__(self, kinds, **proc_kwargs):

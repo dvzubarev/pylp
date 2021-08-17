@@ -3,9 +3,9 @@
 
 import collections
 
-from ex_pylp.common import PosTag
-from ex_pylp.common import Attr
-import ex_pylp.common as pylp
+from pylp.common import PosTag
+from pylp.common import Attr
+import pylp.common as pylp
 
 def convert_lang(lang_str):
     return pylp.LANG_DICT.get(lang_str.upper(), pylp.Lang.UNDEF)

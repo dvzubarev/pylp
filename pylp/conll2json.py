@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from ex_pylp.converter_conll_ud_v1 import ConverterConllUDV1
-from ex_pylp.isanlp_converter import convert_to_json
+from pylp.converter_conll_ud_v1 import ConverterConllUDV1
+from pylp.isanlp_converter import convert_to_json
 
 class _SplitTokensIntoSents:
     """Extra processor for easy converting to json."""

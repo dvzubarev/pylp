@@ -2,7 +2,7 @@
 # coding: utf-8
 
 
-from ex_pylp.common import Attr
+from pylp.common import Attr
 
 def make_words_dict(doc):
     #TODO Sort words by freq

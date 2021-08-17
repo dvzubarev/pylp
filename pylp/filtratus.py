@@ -3,12 +3,12 @@
 
 import logging
 
-from ex_pylp.common import Attr
-from ex_pylp.common import PosTag
-from ex_pylp.common import Lang
-from ex_pylp.common import SyntLink
+from pylp.common import Attr
+from pylp.common import PosTag
+from pylp.common import Lang
+from pylp.common import SyntLink
 
-from ex_pylp.utils import adjust_syntax_links
+from pylp.utils import adjust_syntax_links
 
 class FiltratusContext:
     def __init__(self, doc):

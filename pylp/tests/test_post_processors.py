@@ -3,8 +3,8 @@
 
 import pytest
 
-from ex_pylp.common import Attr
-from ex_pylp.post_processors import FragmentsMaker
+from pylp.common import Attr
+from pylp.post_processors import FragmentsMaker
 
 
 @pytest.fixture

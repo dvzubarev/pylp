@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from ex_pylp.utils import make_words_dict
-from ex_pylp.common import Attr
-import ex_pylp.converter as conv
+from pylp.utils import make_words_dict
+from pylp.common import Attr
+import pylp.converter as conv
 
 
 ###Annotations convertors
