@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+
 import collections
 
 from pylp.common import PosTag
 from pylp.common import Attr
 import pylp.common as pylp
 
+
 def convert_lang(lang_str):
     return pylp.LANG_DICT.get(lang_str.upper(), pylp.Lang.UNDEF)
 
+
 class SyntConv:
-    def __init__(self, calc_stat = False):
+    def __init__(self, calc_stat=False):
         self._calc_stat = calc_stat
         self._stat = None
         if calc_stat:
@@ -29,18 +32,20 @@ class SyntConv:
         if parent_pos != -1:
             fields.append((Attr.SYNTAX_PARENT, parent_pos - pos))
 
-        #TODO what to do with modificators?
-        #nsubj:pass
-        #acl:relcl
-        #cc:preconj
-        fields.append((Attr.SYNTAX_LINK_NAME,
-                       pylp.SYNT_LINK_DICT[link_name.split(':', 1)[0].upper()]))
+        # TODO what to do with modificators?
+        # nsubj:pass
+        # acl:relcl
+        # cc:preconj
+        fields.append(
+            (Attr.SYNTAX_LINK_NAME, pylp.SYNT_LINK_DICT[link_name.split(':', 1)[0].upper()])
+        )
 
         self._update_stat(link_name)
         return fields
 
+
 class MorphConv:
-    def __init__(self, calc_stat = False):
+    def __init__(self, calc_stat=False):
         self._calc_stat = calc_stat
         self._stat = None
         if calc_stat:
@@ -50,7 +55,6 @@ class MorphConv:
         if self._calc_stat:
             for feat_name, val in morph_feats.items():
                 self._stat["%s_%s" % (feat_name, val)] += 1
-
 
     def stat(self):
         return self._stat
@@ -82,15 +86,13 @@ class MorphConv:
             elif pos_tag == PosTag.ADJ:
                 self._adjust_adj(morph_feats, fields)
 
-        #TODO verb moods? other verb forms Fin? Imp?
-        #TODO 'VerbForm' may occur not only for verbs
+        # TODO verb moods? other verb forms Fin? Imp?
+        # TODO 'VerbForm' may occur not only for verbs
 
         if 'Number' in morph_feats:
             n = pylp.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
             if n != pylp.WordNumber.SING:
                 fields.append((Attr.PLURAL, n))
-
-
 
         if 'Gender' in morph_feats:
             fields.append((Attr.GENDER, pylp.WORD_GENDER_DICT[morph_feats['Gender'].upper()]))
@@ -105,9 +107,11 @@ class MorphConv:
             fields.append((Attr.PERSON, pylp.WORD_PERSON_DICT[morph_feats['Person'].upper()]))
 
         if 'Comparision' in morph_feats:
-            fields.append((Attr.COMPARISON, pylp.WORD_COMPARISON_DICT[morph_feats['Comparision'].upper()]))
+            fields.append(
+                (Attr.COMPARISON, pylp.WORD_COMPARISON_DICT[morph_feats['Comparision'].upper()])
+            )
 
-        #TODO skip default
+        # TODO skip default
         if 'Aspect' in morph_feats:
             fields.append((Attr.ASPECT, pylp.WORD_ASPECT_DICT[morph_feats['Aspect'].upper()]))
 
@@ -121,7 +125,7 @@ class MorphConv:
             if a != pylp.WordAnimacy.INAN:
                 fields.append((Attr.ANIMACY, a))
 
-        #TODO valency?
+        # TODO valency?
 
         self._update_stat(morph_feats)
         return fields

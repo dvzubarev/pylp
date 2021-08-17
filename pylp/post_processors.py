@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+
 import logging
 
 from pylp.filtratus import Filtratus
 from pylp.common import Attr
 from pylp.common import PosTag
 from pylp.common import SyntLink
+
 
 class PostProcessor:
     def __init__(self, kinds, **proc_kwargs):
@@ -25,6 +27,7 @@ class PostProcessor:
             params = proc_params.get(params_key, {})
             self._procs[k](text, doc_obj, **params)
 
+
 def create_postprocessor(kind, **kwargs):
     if kind == Filtratus.name:
         return Filtratus(**kwargs)
@@ -39,12 +42,16 @@ class AbcPostProcessor:
     def __call__(self, text, doc_obj):
         raise NotImplementedError("ABC")
 
+
 class PrepositionCompressor(AbcPostProcessor):
     name = "preposition_compressor"
+
     def __init__(self):
-        self._prep_whitelist = frozenset([
-            18370182862529888470, #of
-        ])
+        self._prep_whitelist = frozenset(
+            [
+                18370182862529888470,  # of
+            ]
+        )
 
     def __call__(self, text, doc_obj):
         for s in doc_obj['sents']:
@@ -53,8 +60,10 @@ class PrepositionCompressor(AbcPostProcessor):
     def _proc_sent(self, sent, word_ids):
         for pos, wobj in enumerate(sent):
 
-            if wobj.get(Attr.POS_TAG) == PosTag.ADP and \
-               wobj.get(Attr.SYNTAX_LINK_NAME) == SyntLink.CASE:
+            if (
+                wobj.get(Attr.POS_TAG) == PosTag.ADP
+                and wobj.get(Attr.SYNTAX_LINK_NAME) == SyntLink.CASE
+            ):
                 head_offs = wobj.get(Attr.SYNTAX_PARENT)
                 if not head_offs:
                     continue
@@ -68,14 +77,22 @@ class PrepositionCompressor(AbcPostProcessor):
 
 class FragmentsMaker(AbcPostProcessor):
     name = "fragments_maker"
+
     def __init__(self):
         pass
 
     def _sent_chars_cnt(self, doc_obj, sent):
         return sum(len(doc_obj['words'][wobj[Attr.WORD_NUM]]) for wobj in sent)
 
-    def __call__(self, text, doc_obj, max_fragment_length = 20,
-                 max_chars_cnt = 5_000, min_sent_length = 4, overlap = 2):
+    def __call__(
+        self,
+        text,
+        doc_obj,
+        max_fragment_length=20,
+        max_chars_cnt=5_000,
+        min_sent_length=4,
+        overlap=2,
+    ):
         good_sents = []
         fragments = []
         fragment_size = 0
@@ -91,26 +108,30 @@ class FragmentsMaker(AbcPostProcessor):
                 fragment_size += 1
                 good_sents.append(num)
 
-            if fragment_size >= max_fragment_length or \
-               (max_chars_cnt and fragment_chars_cnt > max_chars_cnt):
+            if fragment_size >= max_fragment_length or (
+                max_chars_cnt and fragment_chars_cnt > max_chars_cnt
+            ):
 
                 fragments.append((fragment_begin_no, num))
-                if overlap and good_sents and \
-                   good_sents[-min(overlap, len(good_sents))] > fragment_begin_no:
+                if (
+                    overlap
+                    and good_sents
+                    and good_sents[-min(overlap, len(good_sents))] > fragment_begin_no
+                ):
                     fragment_begin_no = good_sents[-min(overlap, len(good_sents))]
                 else:
                     fragment_begin_no = num + 1
 
                 fragment_size = overlap
                 if max_chars_cnt:
-                    fragment_chars_cnt = sum(self._sent_chars_cnt(doc_obj, s)
-                                             for s in doc_obj['sents'][fragment_begin_no:num+1])
-
-
+                    fragment_chars_cnt = sum(
+                        self._sent_chars_cnt(doc_obj, s)
+                        for s in doc_obj['sents'][fragment_begin_no : num + 1]
+                    )
 
         end = len(doc_obj['sents']) - 1
         cur_end = fragments[-1][1] if fragments else -1
-        if num != -1  and fragment_begin_no <= end and cur_end != end:
+        if num != -1 and fragment_begin_no <= end and cur_end != end:
             fragments.append((fragment_begin_no, end))
 
         logging.debug("created %d fragments", len(fragments))

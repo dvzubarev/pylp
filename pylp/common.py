@@ -19,6 +19,7 @@ def _make_list_for_enum(enum_cls):
 
 #LANG
 
+# fmt: off
 class Lang(enum.IntEnum):
     RU    = 0
     EN    = 1
@@ -195,3 +196,5 @@ class Attr:
     PREP_MOD         = 'M'
     #TEMP
     PREP_WHITE_LIST  = 'W'
+
+# fmt: on

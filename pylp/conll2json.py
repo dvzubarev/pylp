@@ -4,6 +4,7 @@
 from pylp.converter_conll_ud_v1 import ConverterConllUDV1
 from pylp.isanlp_converter import convert_to_json
 
+
 class _SplitTokensIntoSents:
     """Extra processor for easy converting to json."""
 
@@ -31,7 +32,6 @@ class _MergePostagIntoMorph:
         return {'morph': morph}
 
 
-
 def _from_conll(text, conll_annots):
     converter = ConverterConllUDV1()
     annotations = converter(conll_annots)
@@ -50,9 +50,10 @@ def _from_conll(text, conll_annots):
 
     return annotations
 
-def convert(text, conll_annots, lang, analyze_opts:dict=None):
-    #TODO Its legacy code
-    #Need to simplify and get rid of unnecessary convertation to isanlp annotations
+
+def convert(text, conll_annots, lang, analyze_opts: dict = None):
+    # TODO Its legacy code
+    # Need to simplify and get rid of unnecessary convertation to isanlp annotations
 
     annots = _from_conll(text, conll_annots)
     annots['lang'] = lang

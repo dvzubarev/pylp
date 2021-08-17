@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-
 from pylp.common import Attr
 
+
 def make_words_dict(doc):
-    #TODO Sort words by freq
-    #most frequent words should have smaller indexes
+    # TODO Sort words by freq
+    # most frequent words should have smaller indexes
     d = {}
     flatten_words = []
     for sent in doc:
@@ -16,6 +16,7 @@ def make_words_dict(doc):
                 flatten_words.append(w)
 
     return flatten_words, d
+
 
 def adjust_syntax_links(new_sent, old_sent, new_positions):
     """Example:
@@ -28,19 +29,19 @@ def adjust_syntax_links(new_sent, old_sent, new_positions):
     """
     for old_pos, old_word in enumerate(old_sent):
         if new_positions[old_pos] == -1:
-            #this word does not exist anymore
+            # this word does not exist anymore
             continue
         new_pos = new_positions[old_pos]
 
         old_parent_offs = new_sent[new_pos].get(Attr.SYNTAX_PARENT)
         if old_parent_offs is None:
-            #this is root or no link
+            # this is root or no link
             continue
         old_parent_pos = old_pos + old_parent_offs
 
         new_parent_pos = new_positions[old_parent_pos]
         if new_parent_pos == -1:
-            #parent does not exist
+            # parent does not exist
             if Attr.SYNTAX_LINK_NAME in new_sent[new_pos]:
                 del new_sent[new_pos][Attr.SYNTAX_LINK_NAME]
             if Attr.SYNTAX_PARENT in new_sent[new_pos]:
