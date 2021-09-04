@@ -3,6 +3,15 @@
 
 from pylp.common import Attr
 
+import libpyexbase
+
+
+def word_id_combiner(words):
+    w = words[0]
+    for i in range(1, len(words)):
+        w = libpyexbase.combine_word_id(w, words[i])
+    return w
+
 
 def make_words_dict(doc):
     # TODO Sort words by freq
