@@ -3,21 +3,25 @@
 
 import enum
 
+
 def _enum2str(enum_val):
     s = str(enum_val)
-    return s[s.index('.') + 1:]
+    return s[s.index('.') + 1 :]
 
-def _make_dict_for_enum(enum_cls, translator = None):
+
+def _make_dict_for_enum(enum_cls, translator=None):
     if translator is None:
-        return {_enum2str(v):int(v) for v in enum_cls}
-    return {translator[_enum2str(v)]:int(v) for v in enum_cls}
+        return {_enum2str(v): int(v) for v in enum_cls}
+    return {translator[_enum2str(v)]: int(v) for v in enum_cls}
+
 
 def _make_list_for_enum(enum_cls):
     return [_enum2str(v) for v in enum_cls]
 
-#CONVERTER TABLES
 
-#LANG
+# CONVERTER TABLES
+
+# LANG
 
 # fmt: off
 class Lang(enum.IntEnum):
@@ -169,6 +173,7 @@ class WordAnimacy(enum.IntEnum):
 WORD_ANIMACY_DICT = _make_dict_for_enum(WordAnimacy)
 
 
+UNDEF_WORD_NUM = -1
 
 #ATTRIBUTES
 class Attr:
@@ -197,4 +202,9 @@ class Attr:
     #TEMP
     PREP_WHITE_LIST  = 'W'
 
+PREP_WHITELIST = frozenset([
+    "of",
+    18370182862529888470,  # of
+
+])
 # fmt: on

@@ -3,264 +3,312 @@
 
 import copy
 import logging
-import unittest
 
-from pylp.phrases.builder import build_trees
-from pylp.phrases.builder import build_words
-from pylp.phrases.builder import build_phrases_iter
-from pylp.phrases.builder import build_phrases_recurs
+from pylp.phrases.builder import (
+    BasicPhraseBuilder,
+    PhraseBuilder,
+    Phrase,
+    Sent,
+    make_new_phrase,
+    make_2word_phrase,
+)
 
-from pylp.phrases.builder import NormPhrase
-from pylp.phrases.builder import PhraseMerger
-from pylp.phrases.builder import create_sents_with_phrases
+import pylp.common as lp
 
 
-class PhrasesTestCase(unittest.TestCase):
-    def setUp(self):
-        # self.phrases_builder = build_phrases_recurs
-        self.phrases_builder = build_phrases_iter
-        words = [
-            'известный',
-            '43',
-            'клинический',
-            'случай',
-            'психоаналитический',
-            'практика',
-            'зигмунд',
-            'фрейд',
-            'весь',
-            'этот',
-            'работа',
+class TestPhraseBuilder(BasicPhraseBuilder):
+    def _test_modifier(self, word_obj, pos, sent, mods_index):
+        return lp.Attr.SYNTAX_PARENT in word_obj and word_obj[lp.Attr.SYNTAX_PARENT]
+
+    def _test_head(self, word_obj, pos, sent, mods_index):
+        return True
+
+
+def _mkw(num, link, PoS=lp.PosTag.UNDEF, link_kind=-1):
+    word_obj = {lp.Attr.WORD_NUM: num, lp.Attr.SYNTAX_PARENT: link}
+    if PoS != lp.PosTag.UNDEF:
+        word_obj[lp.Attr.POS_TAG] = PoS
+    if link_kind != lp.SyntLink.ROOT:
+        word_obj[lp.Attr.SYNTAX_LINK_NAME] = link_kind
+    return word_obj
+
+
+def _create_sent():
+    words = [
+        'известный',  # 0
+        '43',
+        'клинический',
+        'случай',
+        'психоаналитический',
+        'практика',
+        'зигмунд',  # 6
+        'фрейд',
+        'весь',
+        'этот',
+        'работа',  # 10
+    ]
+    sent = [
+        _mkw(0, 0),
+        _mkw(1, 0),
+        _mkw(2, 1),
+        _mkw(3, 0),
+        _mkw(4, 1),
+        _mkw(5, 0),
+        _mkw(6, 1),
+        _mkw(7, -2),
+        _mkw(8, 0),
+        _mkw(9, 0),
+        _mkw(10, 0),
+    ]
+
+    return sent, words
+
+
+def _create_complex_sent():
+    # fmt: off
+    words = [
+        'm1',
+        'm2',
+        'r', #2
+        'm3',
+        'h1', #4
+        'm4',
+        'm5',
+        'h2' #7
+    ]
+    # fmt: on
+
+    sent = [
+        _mkw(0, 2),
+        _mkw(1, 1),
+        _mkw(2, 0),
+        _mkw(3, 1),
+        _mkw(4, -2),
+        _mkw(5, 2),
+        _mkw(6, 1),
+        _mkw(7, -3),
+    ]
+    return sent, words
+
+
+def test_phrases_builder():
+    sent, words = _create_sent()
+    phrase_builder = TestPhraseBuilder(MaxN=2)
+
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    assert len(phrases) == 4
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    assert str_phrases == [
+        'зигмунд_фрейд',
+        'клинический_случай',
+        'практика_фрейд',
+        'психоаналитический_практика',
+    ]
+
+    phrase_builder = TestPhraseBuilder(MaxN=3)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    # print(str_phrases)
+    assert len(phrases) == 6
+    assert str_phrases == [
+        'зигмунд_фрейд',
+        'клинический_случай',
+        'практика_зигмунд_фрейд',
+        'практика_фрейд',
+        'психоаналитический_практика',
+        'психоаналитический_практика_фрейд',
+    ]
+
+    phrase_builder = TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    # print(str_phrases)
+    assert len(phrases) == 7
+    assert str_phrases == [
+        'зигмунд_фрейд',
+        'клинический_случай',
+        'практика_зигмунд_фрейд',
+        'практика_фрейд',
+        'психоаналитический_практика',
+        'психоаналитический_практика_зигмунд_фрейд',
+        'психоаналитический_практика_фрейд',
+    ]
+
+
+def test_phrases_builder_2():
+    sent, words = _create_complex_sent()
+    phrase_builder = TestPhraseBuilder(MaxN=3)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    # print(str_phrases)
+    assert len(phrases) == 16
+    etal_phrases = [
+        'h1_h2',
+        'h1_m4_h2',
+        'h1_m5_h2',
+        'm1_m2_r',
+        'm1_r',
+        'm1_r_h1',
+        'm2_r',
+        'm2_r_h1',
+        'm3_h1',
+        'm3_h1_h2',
+        'm4_h2',
+        'm4_m5_h2',
+        'm5_h2',
+        'r_h1',
+        'r_h1_h2',
+        'r_m3_h1',
+    ]
+    assert str_phrases == etal_phrases
+
+    phrase_builder = TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    # print(str_phrases)
+    assert len(phrases) == 27
+    etal_phrases.extend(
+        [
+            'm1_r_h1_h2',
+            'm1_r_m3_h1',
+            'm1_m2_r_h1',
+            'm2_r_h1_h2',
+            'm2_r_m3_h1',
+            'r_h1_m4_h2',
+            'r_h1_m5_h2',
+            'r_m3_h1_h2',
+            'h1_m4_m5_h2',
+            'm3_h1_m4_h2',
+            'm3_h1_m5_h2',
         ]
-        self.sent = {
-            'words': words,
-            'phrases': [[2, 3], [4, 5], [6, 7], [7, 5]],
-            'extra': [None] * len(words),
-        }
+    )
+    etal_phrases.sort()
+    assert str_phrases == etal_phrases
 
-        words = ['m1', 'm2', 'r', 'm3', 'h1', 'm4', 'm5', 'h2']
-        self.complex_sent = {
-            'words': words,
-            'phrases': [[0, 2], [1, 2], [3, 4], [4, 2], [5, 7], [6, 7], [7, 4]],
-            'extra': [None] * len(words),
-        }
 
-    def test_build_trees(self):
-        trees = build_trees(self.sent)
-        self.assertEqual(2, len(trees))
-        self.assertEqual(3, trees[0].pos())
-        self.assertEqual(5, trees[1].pos())
-        self.assertEqual(2, len(trees[1]._mods))
+def test_multiple_right_mods():
+    words = ['r', 'm1', 'h1', 'h2']
+    sent = [_mkw(0, 0), _mkw(1, 1), _mkw(2, -2), _mkw(3, -3)]
 
-    def test_generate_phrases(self):
-        phrases = self.phrases_builder(self.sent, 2)
-        self.assertEqual(4, len(phrases))
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        self.assertEqual(
-            [
-                'зигмунд_фрейд',
-                'клинический_случай',
-                'практика_фрейд',
-                'психоаналитический_практика',
-            ],
-            str_phrases,
-        )
+    phrase_builder = TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    # print (str_phrases)
 
-        phrases = self.phrases_builder(self.sent, 3)
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        # print(str_phrases)
-        self.assertEqual(6, len(phrases))
-        self.assertEqual(
-            [
-                'зигмунд_фрейд',
-                'клинический_случай',
-                'практика_зигмунд_фрейд',
-                'практика_фрейд',
-                'психоаналитический_практика',
-                'психоаналитический_практика_фрейд',
-            ],
-            str_phrases,
-        )
+    assert len(phrases) == 6
+    assert str_phrases == ['m1_h1', 'r_h1', 'r_h1_h2', 'r_h2', 'r_m1_h1', 'r_m1_h1_h2']
 
-        phrases = self.phrases_builder(self.sent, 4)
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        # print(str_phrases)
-        self.assertEqual(7, len(phrases))
-        self.assertEqual(
-            [
-                'зигмунд_фрейд',
-                'клинический_случай',
-                'практика_зигмунд_фрейд',
-                'практика_фрейд',
-                'психоаналитический_практика',
-                'психоаналитический_практика_зигмунд_фрейд',
-                'психоаналитический_практика_фрейд',
-            ],
-            str_phrases,
-        )
 
-    def test_generate_complex_phrarses(self):
-        phrases = self.phrases_builder(self.complex_sent, 3)
+def test_phrase_merging1():
+    sent = Sent([_mkw(0, 1), _mkw(1, 0), _mkw(2, 1), _mkw(3, -2)], ['m1', 'r', 'm2', 'h1'])
 
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        # print(str_phrases)
-        self.assertEqual(16, len(phrases))
-        etal_phrases = [
-            'h1_h2',
-            'h1_m4_h2',
-            'h1_m5_h2',
-            'm1_m2_r',
-            'm1_r',
-            'm1_r_h1',
-            'm2_r',
-            'm2_r_h1',
-            'm3_h1',
-            'm3_h1_h2',
-            'm4_h2',
-            'm4_m5_h2',
-            'm5_h2',
-            'r_h1',
-            'r_h1_h2',
-            'r_m3_h1',
-        ]
-        self.assertEqual(etal_phrases, str_phrases)
+    root = Phrase(1, sent)
+    mod1 = Phrase(0, sent)
 
-        phrases = self.phrases_builder(self.complex_sent, 4)
+    root = make_new_phrase(root, mod1, sent, set())
 
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        # print(str_phrases)
-        self.assertEqual(27, len(phrases))
-        etal_phrases.extend(
-            [
-                'm1_r_h1_h2',
-                'm1_r_m3_h1',
-                'm1_m2_r_h1',
-                'm2_r_h1_h2',
-                'm2_r_m3_h1',
-                'r_h1_m4_h2',
-                'r_h1_m5_h2',
-                'r_m3_h1_h2',
-                'h1_m4_m5_h2',
-                'm3_h1_m4_h2',
-                'm3_h1_m5_h2',
-            ]
-        )
-        etal_phrases.sort()
-        self.assertEqual(etal_phrases, str_phrases)
+    assert len(root.get_words()) == 2
+    assert root.get_words() == ['m1', 'r']
+    assert root.get_deps() == [1, None]
+    assert root.get_id() == 'm1_r'
 
-    def test_multiple_right_mods(self):
-        sent = {
-            'words': ['r', 'm1', 'h1', 'h2'],
-            'phrases': [[2, 0], [1, 2], [3, 0]],
-            'extra': [None, None, None, None],
-        }
+    root_m1_r = copy.deepcopy(root)
 
-        phrases = self.phrases_builder(sent, 4)
-        str_phrases = [p.get_id() for p in phrases]
-        str_phrases.sort()
-        # print (str_phrases)
-        self.assertEqual(6, len(str_phrases))
-        self.assertEqual(['m1_h1', 'r_h1', 'r_h1_h2', 'r_h2', 'r_m1_h1', 'r_m1_h1_h2'], str_phrases)
+    head1 = Phrase(3, sent)
+    root = make_new_phrase(root, head1, sent, set())
+    assert len(root.get_words()) == 3
+    assert root.get_words() == ['m1', 'r', 'h1']
+    assert root.get_deps() == [1, None, -1]
+    assert root.get_id() == 'm1_r_h1'
 
-    def test_convert_phrase(self):
-        # 'words': ['известный', '43', 'клинический', 'случай', 'психоаналитический',
-        #           'практика', 'зигмунд', 'фрейд', 'весь', 'этот', 'работа'],
-        all_words = build_words(self.sent)
-        words = [all_words[4], all_words[5], all_words[6], all_words[7]]
+    root = copy.deepcopy(root_m1_r)
+    mod2 = Phrase(2, sent)
+    head1 = make_new_phrase(head1, mod2, sent, set())
+    root = make_new_phrase(root, head1, sent, set())
+    assert len(root.get_words()) == 4
+    assert root.get_words() == ['m1', 'r', 'm2', 'h1']
+    assert root.get_deps() == [1, None, 1, -2]
+    assert root.get_id() == 'm1_r_m2_h1'
 
-        p = NormPhrase(words)
-        self.assertEqual(4, len(p.get_words()))
-        self.assertEqual(['психоаналитический', 'практика', 'зигмунд', 'фрейд'], p.get_words())
 
-        self.assertEqual(4, len(p.get_deps()))
-        self.assertEqual([1, None, 3, 1], p.get_deps())
+def test_phrase_merging2():
+    sent = Sent([_mkw(0, 0), _mkw(1, 1), _mkw(2, -2), _mkw(3, -3)], ['r', 'm1', 'h1', 'h2'])
 
-        self.assertEqual('психоаналитический_практика_зигмунд_фрейд', p.get_id())
+    root = Phrase(0, sent)
+    mod1 = Phrase(1, sent)
+    h1 = Phrase(2, sent)
+    h2 = Phrase(3, sent)
+    root = make_2word_phrase(root, h2, sent)
+    assert root.get_id() == 'r_h2'
+    assert root.get_deps() == [None, -1]
+    mod = make_2word_phrase(h1, mod1, sent)
+    root = make_new_phrase(root, mod, sent, set())
+    assert len(root.get_words()) == 4
+    assert root.get_words() == ['r', 'm1', 'h1', 'h2']
+    assert root.get_deps() == [None, 1, -2, -3]
+    assert root.get_id() == 'r_m1_h1_h2'
 
-        words2 = [all_words[6], all_words[7]]
-        p2 = NormPhrase(words2)
-        self.assertEqual(2, len(p2.get_words()))
-        self.assertEqual([1, None], p2.get_deps())
-        self.assertEqual('зигмунд_фрейд', p2.get_id())
 
-    def test_mods_order_phrase(self):
-        sent1 = {'words': ['m1', 'm2', 'h1'], 'phrases': [[0, 2], [1, 2]]}
+def test_phrase_merging3():
+    sent = Sent([_mkw(0, 2), _mkw(1, 1), _mkw(2, 0)], ['m1', 'm2', 'r'])
+    root = Phrase(2, sent)
+    mod1 = Phrase(0, sent)
+    mod2 = Phrase(1, sent)
+    root = make_2word_phrase(root, mod1, sent)
+    assert root.get_head_pos() == 1
+    root = make_new_phrase(root, mod2, sent, set())
+    assert len(root.get_words()) == 3
+    assert root.get_words() == ['m1', 'm2', 'r']
+    assert root.get_deps() == [2, 1, None]
+    assert root.get_id() == 'm1_m2_r'
 
-        sent2 = {'words': ['m2', 'm1', 'h1'], 'phrases': [[0, 2], [1, 2]]}
 
-        words1 = build_words(sent1)
-        words2 = build_words(sent2)
+def test_excluding_words():
+    words = ['r', 'm1', 'h1', 'h2']
+    sent = [_mkw(0, 0), _mkw(lp.UNDEF_WORD_NUM, 1), _mkw(2, -2), _mkw(lp.UNDEF_WORD_NUM, -3)]
 
-        phrase1 = NormPhrase(words1)
-        phrase2 = NormPhrase(words2)
-        self.assertEqual(phrase1.get_id(), phrase2.get_id())
+    phrase_builder = TestPhraseBuilder(MaxN=5)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    assert len(phrases) == 1
+    assert str_phrases == ['r_h1']
 
-    def test_phrase_merging1(self):
-        words = ['m1', 'r', 'm2', 'h1']
-        root = PhraseMerger(1, words)
 
-        mod1 = PhraseMerger(0, words)
+def test_full_phrase_builder():
+    words = ['r', 'm1', 'h1', 'h2']
+    sent = [
+        _mkw(0, 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw(2, 1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NSUBJ),
+    ]
 
-        root = root.make_new_phrase(mod1, words)
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['h1_h2', 'm1_h1', 'm1_h1_h2']
 
-        self.assertEqual(2, len(root.get_words()))
-        self.assertEqual(['m1', 'r'], root.get_words())
-        self.assertEqual([1, None], root.get_deps())
-        self.assertEqual('m1_r', root.get_id())
 
-        root_m1_r = copy.deepcopy(root)
+def test_phrases_with_prepositions():
+    words = ['h1', 'of', 'm1', 'h2']
+    sent = [
+        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw(1, 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
 
-        head1 = PhraseMerger(3, words)
-        root = root.make_new_phrase(head1, words)
-        self.assertEqual(3, len(root.get_words()))
-        self.assertEqual(['m1', 'r', 'h1'], root.get_words())
-        self.assertEqual([1, None, -1], root.get_deps())
-        self.assertEqual('m1_r_h1', root.get_id())
-
-        root = copy.deepcopy(root_m1_r)
-        mod2 = PhraseMerger(2, words)
-        head1 = head1.make_new_phrase(mod2, words)
-        root = root.make_new_phrase(head1, words)
-        self.assertEqual(4, len(root.get_words()))
-        self.assertEqual(['m1', 'r', 'm2', 'h1'], root.get_words())
-        self.assertEqual([1, None, 1, -2], root.get_deps())
-        self.assertEqual('m1_r_m2_h1', root.get_id())
-
-        words = ['r', 'm1', 'h1', 'h2']
-        root = PhraseMerger.mod_head2phrase(3, 0, words)
-        mod = PhraseMerger.mod_head2phrase(1, 2, words)
-        root = root.make_new_phrase(mod, words)
-        self.assertEqual(4, len(root.get_words()))
-        self.assertEqual(['r', 'm1', 'h1', 'h2'], root.get_words())
-        self.assertEqual([None, 1, -2, -3], root.get_deps())
-        self.assertEqual('r_m1_h1_h2', root.get_id())
-
-        words = ['m1', 'm2', 'r']
-        root = PhraseMerger.mod_head2phrase(0, 2, words)
-        mod = PhraseMerger(1, words)
-        root = root.make_new_phrase(mod, words)
-        self.assertEqual(3, len(root.get_words()))
-        self.assertEqual(['m1', 'm2', 'r'], root.get_words())
-        self.assertEqual([2, 1, None], root.get_deps())
-        self.assertEqual('m1_m2_r', root.get_id())
-
-    def test_replace(self):
-        sent = {
-            'words': ['r', 'm1', 'h1', 'h2'],
-            'phrases': [[2, 0], [1, 2], [3, 0]],
-            'extra': [None, None, None, None],
-        }
-
-        new_sent = create_sents_with_phrases([sent], 3, '_'.join, create_mode='replace')[0]
-
-        print(new_sent)
-        self.assertEqual(2, len(new_sent))
-
-        str_phrases = [p['id'] for p in new_sent]
-        str_phrases.sort()
-        self.assertEqual(['r_h1_h2', 'r_m1_h1'], str_phrases)
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    str_phrases = [p.get_id() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']

@@ -8,6 +8,7 @@ from pylp.filtratus import Filtratus
 from pylp.common import Attr
 from pylp.common import PosTag
 from pylp.common import SyntLink
+from pylp.common import PREP_WHITELIST
 
 
 class PostProcessor:
@@ -46,13 +47,6 @@ class AbcPostProcessor:
 class PrepositionCompressor(AbcPostProcessor):
     name = "preposition_compressor"
 
-    def __init__(self):
-        self._prep_whitelist = frozenset(
-            [
-                18370182862529888470,  # of
-            ]
-        )
-
     def __call__(self, text, doc_obj):
         for s in doc_obj['sents']:
             self._proc_sent(s, doc_obj['word_ids'])
@@ -71,7 +65,7 @@ class PrepositionCompressor(AbcPostProcessor):
                 head_obj = sent[head_pos]
 
                 head_obj[Attr.PREP_MOD] = wobj[Attr.WORD_NUM]
-                if word_ids[wobj[Attr.WORD_NUM]] in self._prep_whitelist:
+                if word_ids[wobj[Attr.WORD_NUM]] in PREP_WHITELIST:
                     head_obj[Attr.PREP_WHITE_LIST] = True
 
 
