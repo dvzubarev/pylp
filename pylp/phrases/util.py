@@ -58,7 +58,7 @@ def make_phrases(
     return phrases
 
 
-def replace_words_with_phrases(sent_words, phrases):
+def replace_words_with_phrases(sent_words, phrases, allow_overlapping_phrases=True):
     """phrases are list of prhases from the build_phrases_iter function"""
 
     if not phrases:
@@ -68,9 +68,9 @@ def replace_words_with_phrases(sent_words, phrases):
 
     new_sent = list(range(len(sent_words)))
     logging.debug("new sent: %s", new_sent)
+    pred = all if allow_overlapping_phrases else any
     for p in phrases:
-        # TODO make it optional all or any
-        if all(isinstance(new_sent[pos], tuple) for pos in p.get_sent_pos_list()):
+        if pred(isinstance(new_sent[pos], tuple) for pos in p.get_sent_pos_list()):
             # overlapping with other phrase
             continue
         added = False

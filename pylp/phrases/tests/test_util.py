@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import copy
+
+from pylp.phrases.builder import Phrase
 from pylp.phrases.util import replace_words_with_phrases, add_phrases_to_doc, make_phrases
 import pylp.common as lp
-import copy
 
 
 def _mkw(num, link, PoS=lp.PosTag.UNDEF, link_kind=-1):
@@ -108,3 +110,8 @@ def test_replace():
     sent_phrases = [p.get_id() for p in new_sent]
     sent_phrases.sort()
     assert sent_phrases == ['r_h1_h2', 'r_m1_h1']
+
+    new_sent = replace_words_with_phrases(sent_words, phrases, allow_overlapping_phrases=False)
+    assert len(new_sent) == 2
+    sent_phrases = [p.get_id() if isinstance(p, Phrase) else p for p in new_sent]
+    assert sent_phrases == ['r_m1_h1', 'h2']
