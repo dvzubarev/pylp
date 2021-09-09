@@ -58,13 +58,15 @@ def make_phrases(
     return phrases
 
 
-def replace_words_with_phrases(sent_words, phrases, allow_overlapping_phrases=True):
+def replace_words_with_phrases(
+    sent_words, phrases, allow_overlapping_phrases=True, sort_key=lambda p: -p.size()
+):
     """phrases are list of prhases from the build_phrases_iter function"""
 
     if not phrases:
         return sent_words
 
-    phrases.sort(key=lambda p: -p.size())
+    phrases.sort(key=sort_key)
 
     new_sent = list(range(len(sent_words)))
     logging.debug("new sent: %s", new_sent)

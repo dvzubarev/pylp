@@ -120,7 +120,7 @@ class Phrase:
         return self._id
 
     def __repr__(self) -> str:
-        return self.get_id()
+        return str(self.get_id())
 
     def __str__(self):
         return self.get_id()
