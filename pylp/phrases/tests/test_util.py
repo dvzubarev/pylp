@@ -19,35 +19,33 @@ def _mkw(num, link, PoS=lp.PosTag.UNDEF, link_kind=-1):
 
 def _create_doc_obj():
     doc_obj = {
-        'text': {
-            'words': ['h1', 'of', 'm1', 'h2', 'm2', 'h3'],
-            'sents': [
-                [
-                    _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-                    _mkw(1, 2, lp.PosTag.ADP, lp.SyntLink.CASE),
-                    _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                    _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-                ],
-                [
-                    _mkw(2, 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                    _mkw(4, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                    _mkw(3, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-                ],
-                [
-                    _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-                    _mkw(1, 1, lp.PosTag.ADP, lp.SyntLink.CASE),
-                    _mkw(5, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-                ],
+        'words': ['h1', 'of', 'm1', 'h2', 'm2', 'h3'],
+        'sents': [
+            [
+                _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+                _mkw(1, 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+                _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
             ],
-        }
+            [
+                _mkw(2, 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw(4, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw(3, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+            ],
+            [
+                _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+                _mkw(1, 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+                _mkw(5, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+            ],
+        ],
     }
     return doc_obj
 
 
 def test_add_phrases_to_doc():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, use_words=True, combiner='_'.join, min_cnt=0)
-    sent_phrases = doc_obj['text']['sent_phrases']
+    add_phrases_to_doc(doc_obj, 4, use_words=True, min_cnt=0)
+    sent_phrases = doc_obj['sent_phrases']
 
     assert len(sent_phrases) == 3
     sent0 = sent_phrases[0]
@@ -71,8 +69,8 @@ def test_add_phrases_to_doc():
 
 def test_add_phrases_to_doc_with_min_cnt():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, use_words=True, combiner='_'.join, min_cnt=2)
-    sent_phrases = doc_obj['text']['sent_phrases']
+    add_phrases_to_doc(doc_obj, 4, use_words=True, min_cnt=2)
+    sent_phrases = doc_obj['sent_phrases']
 
     assert len(sent_phrases) == 3
     sent0 = sent_phrases[0]
@@ -101,7 +99,7 @@ def test_replace():
         _mkw(2, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
         _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
-    phrases = make_phrases(sent, words, 3, combiner='_'.join)
+    phrases = make_phrases(sent, words, 3)
     sent_words = copy.copy(words)
     new_sent = replace_words_with_phrases(sent_words, phrases)
     print(phrases)
@@ -115,3 +113,10 @@ def test_replace():
     assert len(new_sent) == 2
     sent_phrases = [p.get_id() if isinstance(p, Phrase) else p for p in new_sent]
     assert sent_phrases == ['r_m1_h1', 'h2']
+
+    new_sent = replace_words_with_phrases(
+        sent_words, phrases, allow_overlapping_phrases=False, keep_filler=True
+    )
+    assert len(new_sent) == 4
+    sent_phrases = [p.get_id() if isinstance(p, Phrase) else p for p in new_sent]
+    assert sent_phrases == ['r_m1_h1', None, None, 'h2']

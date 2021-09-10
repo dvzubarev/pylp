@@ -227,17 +227,15 @@ def _generate_new_phrases(head_phrase, mod_phrases, sent: Sent, phrases_cache):
 
 
 class BasicPhraseBuilderOpts:
-    pass
+    def __init__(self, combiner='_'.join):
+        self.combiner = combiner
 
 
 class BasicPhraseBuilder:
-    def __init__(
-        self, MaxN, combiner='_'.join, opts: BasicPhraseBuilderOpts = BasicPhraseBuilderOpts()
-    ) -> None:
+    def __init__(self, MaxN, opts: BasicPhraseBuilderOpts = BasicPhraseBuilderOpts()) -> None:
         if MaxN <= 0:
             raise RuntimeError(f"Invalid MaxNumber of words {MaxN}")
         self._max_n = MaxN
-        self._combiner = combiner
         self._opts = opts
 
     def _create_all_mods_index(self, sent):
@@ -275,7 +273,7 @@ class BasicPhraseBuilder:
             if is_good_head or is_good_mod:
                 words_index[i] = [list() for _ in range(self._max_n)]
                 # init words_index's level 0
-                words_index[i][0] = [Phrase(i, sent, self._combiner)]
+                words_index[i][0] = [Phrase(i, sent, self._opts.combiner)]
 
             if is_good_mod:
                 head_pos = i + word_obj[lp.Attr.SYNTAX_PARENT]
@@ -392,12 +390,15 @@ class BasicPhraseBuilder:
 class PhraseBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
+        combiner='_'.join,
         max_syntax_dist=7,
         good_mod_PoS=None,
         good_synt_rels=None,
         whitelisted_preps=None,
         good_head_PoS=None,
     ):
+        super().__init__(combiner)
+
         self.max_syntax_dist = max_syntax_dist
         self.good_mod_PoS = good_mod_PoS
         if self.good_mod_PoS is None:
@@ -434,10 +435,8 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
 
 
 class PhraseBuilder(BasicPhraseBuilder):
-    def __init__(
-        self, MaxN, combiner='_'.join, opts: PhraseBuilderOpts = PhraseBuilderOpts()
-    ) -> None:
-        super().__init__(MaxN, combiner=combiner, opts=opts)
+    def __init__(self, MaxN, opts: PhraseBuilderOpts = PhraseBuilderOpts()) -> None:
+        super().__init__(MaxN, opts=opts)
 
     def opts(self) -> PhraseBuilderOpts:
         return self._opts
