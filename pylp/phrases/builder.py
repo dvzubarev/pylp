@@ -419,6 +419,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
             self.good_synt_rels = frozenset(
                 [
                     lp.SyntLink.AMOD,
+                    lp.SyntLink.NMOD,
                     lp.SyntLink.COMPOUND,
                     lp.SyntLink.FIXED,
                     lp.SyntLink.FLAT,
@@ -511,10 +512,10 @@ class PhraseBuilder(BasicPhraseBuilder):
 
         link = word_obj[lp.Attr.SYNTAX_LINK_NAME]
         if link not in self.opts().good_synt_rels:
-            if link == lp.SyntLink.NMOD:
-                if not self._test_nmod(word_obj, pos, sent, mods_index):
-                    return False
-            else:
+            return False
+
+        if link == lp.SyntLink.NMOD:
+            if not self._test_nmod(word_obj, pos, sent, mods_index):
                 return False
 
         return True
