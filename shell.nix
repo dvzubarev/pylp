@@ -7,6 +7,7 @@ let pythonEnv = python.withPackages (ps: [
       ps.black
       ps.pyexbase
       ps.ujson
+      ps.pymorphy2
     ]);
 in
 mkShell {
@@ -15,4 +16,5 @@ mkShell {
     latest.nodePackages.pyright
     pythonEnv
   ];
+  shellHook=''PYTHONPATH=`pwd`:"$PYTHONPATH"'';
 }

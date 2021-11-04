@@ -11,9 +11,10 @@ class Sent:
     def __init__(self, sent_word_obj_list, words, extra=None):
         self._sent_word_obj_list = sent_word_obj_list
         self._words = words
-        self._extra = extra
         if extra is None:
             self._extra = [None] * len(sent_word_obj_list)
+        else:
+            self._extra = extra
 
     def __len__(self):
         return len(self._sent_word_obj_list)
@@ -42,7 +43,7 @@ class Sent:
 
 class Phrase:
     def __init__(self, pos: int = None, sent: Sent = None, combiner='_'.join):
-        if pos is not None and not sent.is_word_undef(pos):
+        if pos is not None and sent is not None and not sent.is_word_undef(pos):
             word_obj = sent[pos]
             self._head_pos = 0
             self._sent_pos_list = [pos]
@@ -88,7 +89,7 @@ class Phrase:
         self._words = words
 
     def get_words(self, with_preps=True):
-        if not with_preps:
+        if not with_preps or not any(e and lp.Attr.PREP_WHITE_LIST in e for e in self._extra):
             return self._words
 
         preps = [None] * len(self._words)
