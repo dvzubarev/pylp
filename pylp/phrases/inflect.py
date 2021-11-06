@@ -37,7 +37,8 @@ def inflect_ru_phrase(phrase: Phrase, sent: List[dict]):
 
 
 def inflect_en_phrase(phrase: Phrase, sent: List[dict]):
-    raise NotImplementedError("en inflecting does not implemented yet!")
+    # raise NotImplementedError("en inflecting does not implemented yet!")
+    pass
 
 
 # Implementation
@@ -115,7 +116,8 @@ class RuInflector(Inflector):
                 feats.add(number)
                 if number != 'plur':
                     gender = self._gender2pymorphy(head_obj.get(Attr.GENDER))
-                    feats.add(gender)
+                    if gender is not None:
+                        feats.add(gender)
 
                 case = 'nomn'
                 extra = phrase.get_extra()[head_pos]

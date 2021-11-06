@@ -165,3 +165,20 @@ def test_inflect_phrase():
 
     inflect_phrase(p, sent, Lang.EN)
     assert p.get_words(False) == ['красивая', 'картина']
+
+
+def test_inflect_ru_phrase_with_eng():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['народнолатинский', 'pernula'])
+    p.set_deps([1, None])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.ADJ, Attr.LANG: Lang.RU},
+        {Attr.POS_TAG: PosTag.NOUN, Attr.LANG: Lang.EN},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['народнолатинский', 'pernula']
