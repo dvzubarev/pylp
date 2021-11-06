@@ -191,5 +191,8 @@ class RuInflector(Inflector):
                     break
 
         if parsed is not None:
-            return parsed.inflect(feats).word
+            inflected = parsed.inflect(feats)
+            if inflected is not None:
+                return inflected.word
+
         return None

@@ -182,3 +182,20 @@ def test_inflect_ru_phrase_with_eng():
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words(False) == ['народнолатинский', 'pernula']
+
+
+def test_inflect_ru_phrase3():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['раковина', 'стромбус'])
+    p.set_deps([None, -1])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM, Attr.PLURAL: WordNumber.PLUR},
+        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.MASC},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['раковины', 'стромбус']
