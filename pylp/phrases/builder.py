@@ -3,14 +3,21 @@
 
 import math
 import logging
+import copy
+from typing import List, Optional, FrozenSet
 
+import libpyexbase
 import pylp.common as lp
+from pylp.utils import word_id_combiner
 
 
 class Sent:
-    def __init__(self, sent_word_obj_list, words, extra=None):
+    def __init__(self, sent_word_obj_list, words=None, word_ids: Optional[List] = None, extra=None):
         self._sent_word_obj_list = sent_word_obj_list
+        if words is None and word_ids is None:
+            raise RuntimeError("Either words or word_ids should be set!")
         self._words = words
+        self._word_ids = word_ids
         if extra is None:
             self._extra = [None] * len(sent_word_obj_list)
         else:
@@ -22,14 +29,31 @@ class Sent:
     def __getitem__(self, index):
         return self._sent_word_obj_list[index]
 
-    def word(self, word_obj_or_pos):
+    def _get_word_obj(self, word_obj_or_pos):
         if isinstance(word_obj_or_pos, dict):
             word_obj = word_obj_or_pos
         elif isinstance(word_obj_or_pos, int):
             word_obj = self._sent_word_obj_list[word_obj_or_pos]
         else:
             raise RuntimeError(f"Unknown argument for word_obj_or_pos {word_obj_or_pos}")
-        return self._words[word_obj[lp.Attr.WORD_NUM]]
+        return word_obj
+
+    def word(self, word_obj_or_pos):
+        word_obj = self._get_word_obj(word_obj_or_pos)
+
+        if self._words is not None:
+            words = self._words
+        elif self._word_ids is not None:
+            words = self._word_ids
+        else:
+            raise RuntimeError("Logic error")
+        return words[word_obj[lp.Attr.WORD_NUM]]
+
+    def word_id(self, word_obj_or_pos):
+        if self._word_ids is not None:
+            word_obj = self._get_word_obj(word_obj_or_pos)
+            return self._word_ids[word_obj[lp.Attr.WORD_NUM]]
+        return None
 
     def is_word_undef(self, pos: int):
         return self._sent_word_obj_list[pos][lp.Attr.WORD_NUM] == lp.UNDEF_WORD_NUM
@@ -41,8 +65,61 @@ class Sent:
         return self._extra[pos]
 
 
+class PhraseId:
+    def __init__(self, pos: int, sent: Sent):
+        word_id = self._word_id(pos, sent)
+
+        self._id = word_id
+        self._root = word_id
+        self._id_parts = [word_id]
+        self._prep_id = None
+
+        extra = sent.word_extra(pos)
+        if extra is not None and lp.Attr.PREP_WHITE_LIST in extra:
+            prep_pos, _ = extra[lp.Attr.PREP_WHITE_LIST]
+            self._prep_id = self._word_id(prep_pos, sent)
+
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__['_id'] = self._id
+        result.__dict__['_root'] = self._root
+        result.__dict__['_id_parts'] = copy.copy(self._id_parts)
+        result.__dict__['_prep_id'] = self._prep_id
+        return result
+
+    def __str__(self):
+        return self._id
+
+    def _word_id(self, pos: int, sent: Sent):
+        word_id = sent.word_id(pos)
+        if word_id is None:
+            word_str = sent.word(pos)
+            word_id = libpyexbase.detect_lang_calc_word_id(word_str, True)
+        return word_id
+
+    def get_id(self, with_prep=False):
+        if with_prep and self._prep_id:
+            return libpyexbase.combine_word_id(self._prep_id, self._id)
+        return self._id
+
+    def merge_mod(self, mod: "PhraseId", on_left):
+        mod_id = mod.get_id(with_prep=True)
+        if on_left:
+            i = 0
+            while self._id_parts[i] != self._root and mod_id > self._id_parts[i]:
+                i += 1
+        else:
+            i = len(self._id_parts)
+            while self._id_parts[i - 1] != self._root and mod_id < self._id_parts[i - 1]:
+                i -= 1
+        self._id_parts.insert(i, mod_id)
+        self._id = word_id_combiner(self._id_parts)
+        return self
+
+
 class Phrase:
-    def __init__(self, pos: int = None, sent: Sent = None, combiner='_'.join):
+    def __init__(self, pos: int = None, sent: Sent = None):
         if pos is not None and sent is not None and not sent.is_word_undef(pos):
             word_obj = sent[pos]
             self._head_pos = 0
@@ -52,8 +129,7 @@ class Phrase:
             self._deps = [None]
             self._extra = [sent.word_extra(pos)]
 
-            self._id = self._words[0]
-        self._combiner = combiner
+            self._id_holder = PhraseId(pos, sent)
 
     def size(self):
         return len(self._words)
@@ -66,12 +142,6 @@ class Phrase:
 
     def sent_hp(self):
         return self._sent_pos_list[self._head_pos]
-
-    def get_combiner(self):
-        return self._combiner
-
-    def set_combiner(self, combiner):
-        self._combiner = combiner
 
     def set_sent_pos_list(self, sent_pos_list):
         self._sent_pos_list = sent_pos_list
@@ -99,7 +169,8 @@ class Phrase:
                 # this prep should be added after parent
                 # TODO why after?
                 if self._deps[num]:
-                    preps[num + self._deps[num]] = extra[lp.Attr.PREP_WHITE_LIST]
+                    prep_pos, prep_str = extra[lp.Attr.PREP_WHITE_LIST]
+                    preps[num + self._deps[num]] = prep_str
         words_with_preps = []
         for num, w in enumerate(self._words):
             words_with_preps.append(w)
@@ -114,17 +185,20 @@ class Phrase:
     def get_deps(self):
         return self._deps
 
-    def set_id(self, pid):
-        self._id = pid
+    def set_id_holder(self, pid):
+        self._id_holder = pid
+
+    def get_id_holder(self):
+        return self._id_holder
 
     def get_id(self):
-        return self._id
+        return self._id_holder.get_id()
 
     def __repr__(self) -> str:
-        return str(self.get_id())
+        return f"Phrase(id={self.get_id()}, words= {self.get_words()})"
 
     def __str__(self):
-        return self.get_id()
+        return f"Id:{self.get_id()}, words: {self.get_words()}"
 
 
 def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: Sent):
@@ -133,18 +207,19 @@ def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: Sent):
 
     p = Phrase()
 
-    p.set_head_pos(1 if mod_pos < head_pos else 0)
-    p.set_sent_pos_list([mod_pos, head_pos] if mod_pos < head_pos else [head_pos, mod_pos])
+    mod_on_left = mod_pos < head_pos
+    p.set_head_pos(1 if mod_on_left else 0)
+    p.set_sent_pos_list([mod_pos, head_pos] if mod_on_left else [head_pos, mod_pos])
     p.set_words([sent.word(p) for p in p.get_sent_pos_list()])
-    p.set_deps([1, None] if mod_pos < head_pos else [None, -1])
+    p.set_deps([1, None] if mod_on_left else [None, -1])
 
     mod_extra = sent.word_extra(mod_pos)
     head_extra = sent.word_extra(head_pos)
     p.set_extra([mod_extra, head_extra] if mod_pos < head_pos else [head_extra, mod_extra])
 
-    combiner = mod_phrase.get_combiner()
-    p.set_combiner(combiner)
-    p.set_id(combiner(p.get_words()))
+    p.set_id_holder(
+        copy.copy(head_phrase.get_id_holder()).merge_mod(mod_phrase.get_id_holder(), mod_on_left)
+    )
     return p
 
 
@@ -153,7 +228,8 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phras
     old_head_pos = head_pos = head_phrase.get_head_pos()
 
     head_pos_list = head_phrase.get_sent_pos_list()
-    if head_phrase.sent_hp() < other_phrase.sent_hp():
+    other_on_left = head_phrase.sent_hp() > other_phrase.sent_hp()
+    if not other_on_left:
         # The modificator is on the right side
         insert_pos = len(head_pos_list)
         while other_phrase.sent_hp() < head_pos_list[insert_pos - 1]:
@@ -213,9 +289,12 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phras
         + head_phrase.get_extra()[insert_pos:]
     )
 
-    new_phrase.set_id(head_phrase.get_combiner()(new_phrase.get_words()))
+    new_phrase.set_id_holder(
+        copy.copy(head_phrase.get_id_holder()).merge_mod(
+            other_phrase.get_id_holder(), other_on_left
+        )
+    )
     new_phrase.set_sent_pos_list(phrase_signature)
-    new_phrase.set_combiner(head_phrase.get_combiner())
 
     return new_phrase
 
@@ -228,8 +307,8 @@ def _generate_new_phrases(head_phrase, mod_phrases, sent: Sent, phrases_cache):
 
 
 class BasicPhraseBuilderOpts:
-    def __init__(self, combiner='_'.join):
-        self.combiner = combiner
+    def __init__(self):
+        pass
 
 
 class BasicPhraseBuilder:
@@ -274,7 +353,7 @@ class BasicPhraseBuilder:
             if is_good_head or is_good_mod:
                 words_index[i] = [list() for _ in range(self._max_n)]
                 # init words_index's level 0
-                words_index[i][0] = [Phrase(i, sent, self._opts.combiner)]
+                words_index[i][0] = [Phrase(i, sent)]
 
             if is_good_mod:
                 head_pos = i + word_obj[lp.Attr.SYNTAX_PARENT]
@@ -374,16 +453,16 @@ class BasicPhraseBuilder:
     def _test_head(self, word_obj: dict, pos: int, sent: Sent, mods_index):
         raise NotImplementedError("_test_head")
 
-    def build_phrases_for_sent(self, sent, words):
+    def build_phrases_for_sent(self, sent, words, word_ids=None):
         if len(sent) > 4096:
             raise RuntimeError("Sent size limit!")
-        sent = Sent(sent, words)
+        sent = Sent(sent, words, word_ids=word_ids)
         return self._build_phrases_impl(sent)
 
-    def build_phrases_for_sents(self, sents, words):
+    def build_phrases_for_sents(self, sents, words, word_ids=None):
         sent_phrases = []
         for sent in sents:
-            phrases = self.build_phrases_for_sent(sent, words)
+            phrases = self.build_phrases_for_sent(sent, words, word_ids=word_ids)
             sent_phrases.append(phrases)
         return sent_phrases
 
@@ -391,14 +470,13 @@ class BasicPhraseBuilder:
 class PhraseBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
-        combiner='_'.join,
         max_syntax_dist=7,
-        good_mod_PoS=None,
-        good_synt_rels=None,
-        whitelisted_preps=None,
-        good_head_PoS=None,
+        good_mod_PoS: Optional[FrozenSet[lp.PosTag]] = None,
+        good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
+        whitelisted_preps: Optional[frozenset] = None,
+        good_head_PoS: Optional[FrozenSet[lp.PosTag]] = None,
     ):
-        super().__init__(combiner)
+        super().__init__()
 
         self.max_syntax_dist = max_syntax_dist
         self.good_mod_PoS = good_mod_PoS
@@ -439,6 +517,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
 class PhraseBuilder(BasicPhraseBuilder):
     def __init__(self, MaxN, opts: PhraseBuilderOpts = PhraseBuilderOpts()) -> None:
         super().__init__(MaxN, opts=opts)
+        self._opts = opts
 
     def opts(self) -> PhraseBuilderOpts:
         return self._opts
@@ -461,9 +540,9 @@ class PhraseBuilder(BasicPhraseBuilder):
             ):
                 w = sent.word(mod_obj)
                 if w in self.opts().whitelisted_preps:
-                    whitelisted_preps.append(w)
+                    whitelisted_preps.append((mod_pos, w))
                 else:
-                    preps.append(w)
+                    preps.append((mod_pos, w))
 
         extra_dict = {}
         if whitelisted_preps:
@@ -507,7 +586,7 @@ class PhraseBuilder(BasicPhraseBuilder):
             lp.Attr.SYNTAX_PARENT not in word_obj
             or not word_obj[lp.Attr.SYNTAX_PARENT]
             or math.fabs(word_obj[lp.Attr.SYNTAX_PARENT]) > self.opts().max_syntax_dist
-            or word_obj.get(lp.Attr.POS_TAG, 0) not in self.opts().good_mod_PoS
+            or word_obj.get(lp.Attr.POS_TAG, lp.PosTag.UNDEF) not in self.opts().good_mod_PoS
         ):
             return False
 
@@ -522,4 +601,4 @@ class PhraseBuilder(BasicPhraseBuilder):
         return True
 
     def _test_head(self, word_obj: dict, pos: int, sent: Sent, mods_index):
-        return word_obj.get(lp.Attr.POS_TAG) in self.opts().good_head_PoS
+        return word_obj.get(lp.Attr.POS_TAG, lp.PosTag.UNDEF) in self.opts().good_head_PoS

@@ -42,6 +42,10 @@ def _create_doc_obj():
     return doc_obj
 
 
+def _p2str(phrase, with_phrases=False):
+    return '_'.join(phrase.get_words(with_phrases))
+
+
 def test_add_phrases_to_doc():
     doc_obj = _create_doc_obj()
     add_phrases_to_doc(doc_obj, 4, use_words=True, min_cnt=0)
@@ -49,19 +53,19 @@ def test_add_phrases_to_doc():
 
     assert len(sent_phrases) == 3
     sent0 = sent_phrases[0]
-    str_phrases = [p.get_id() for p in sent0]
+    str_phrases = [_p2str(p, with_phrases=True) for p in sent0]
     str_phrases.sort()
     assert len(str_phrases) == 3
     assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']
 
     sent1 = sent_phrases[1]
-    str_phrases = [p.get_id() for p in sent1]
+    str_phrases = [_p2str(p) for p in sent1]
     str_phrases.sort()
     assert len(str_phrases) == 3
     assert str_phrases == ['m1_h2', 'm1_m2_h2', 'm2_h2']
 
     sent2 = sent_phrases[2]
-    str_phrases = [p.get_id() for p in sent2]
+    str_phrases = [_p2str(p, True) for p in sent2]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['h1_of_h3']
@@ -74,19 +78,19 @@ def test_add_phrases_to_doc_with_min_cnt():
 
     assert len(sent_phrases) == 3
     sent0 = sent_phrases[0]
-    str_phrases = [p.get_id() for p in sent0]
+    str_phrases = [_p2str(p) for p in sent0]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['m1_h2']
 
     sent1 = sent_phrases[1]
-    str_phrases = [p.get_id() for p in sent1]
+    str_phrases = [_p2str(p) for p in sent1]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['m1_h2']
 
     sent2 = sent_phrases[2]
-    str_phrases = [p.get_id() for p in sent2]
+    str_phrases = [_p2str(p) for p in sent2]
     str_phrases.sort()
     assert len(str_phrases) == 0
 
@@ -105,18 +109,18 @@ def test_replace():
     print(phrases)
     print(new_sent)
     assert len(new_sent) == 2
-    sent_phrases = [p.get_id() for p in new_sent]
+    sent_phrases = [_p2str(p) for p in new_sent]
     sent_phrases.sort()
     assert sent_phrases == ['r_h1_h2', 'r_m1_h1']
 
     new_sent = replace_words_with_phrases(sent_words, phrases, allow_overlapping_phrases=False)
     assert len(new_sent) == 2
-    sent_phrases = [p.get_id() if isinstance(p, Phrase) else p for p in new_sent]
+    sent_phrases = [_p2str(p) if isinstance(p, Phrase) else p for p in new_sent]
     assert sent_phrases == ['r_m1_h1', 'h2']
 
     new_sent = replace_words_with_phrases(
         sent_words, phrases, allow_overlapping_phrases=False, keep_filler=True
     )
     assert len(new_sent) == 4
-    sent_phrases = [p.get_id() if isinstance(p, Phrase) else p for p in new_sent]
+    sent_phrases = [_p2str(p) if isinstance(p, Phrase) else p for p in new_sent]
     assert sent_phrases == ['r_m1_h1', None, None, 'h2']

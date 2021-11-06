@@ -3,7 +3,6 @@
 
 import collections
 import logging
-from pylp.utils import word_id_combiner
 from pylp.phrases.builder import PhraseBuilder, PhraseBuilderOpts, Phrase
 
 
@@ -36,8 +35,12 @@ def add_phrases_to_doc(
     builder_opts=PhraseBuilderOpts(),
 ):
     builder = builder_cls(MaxN, builder_opts)
-    words = doc_obj['words'] if use_words else doc_obj['word_ids']
-    phrases = builder.build_phrases_for_sents(doc_obj['sents'], words)
+    word_ids = doc_obj.get('word_ids')
+    words = None
+    if use_words:
+        words = doc_obj['words']
+
+    phrases = builder.build_phrases_for_sents(doc_obj['sents'], words, word_ids=word_ids)
     if min_cnt:
         phrases = remove_rare_phrases(phrases, min_cnt=min_cnt)
     doc_obj['sent_phrases'] = phrases

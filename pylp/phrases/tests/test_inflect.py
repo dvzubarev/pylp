@@ -14,7 +14,6 @@ def test_simple_adj_inflect():
     p.set_words(['красивый', 'картина'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.ADJ},
@@ -32,7 +31,6 @@ def test_simple_participle_inflect():
     p.set_words(['разорвать', 'полотно'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.PARTICIPLE, Attr.TENSE: WordTense.PAST, Attr.VOICE: WordVoice.PASS},
@@ -50,7 +48,6 @@ def test_simple_participle_inflect2():
     p.set_words(['думать', 'голова'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.PARTICIPLE, Attr.TENSE: WordTense.PRES},
@@ -68,7 +65,6 @@ def test_simple_noun_inflect():
     p.set_words(['шляпа', 'капитан'])
     p.set_deps([None, -1])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM},
@@ -86,7 +82,6 @@ def test_plural_inflect():
     p.set_words(['острый', 'ножницы'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.ADJ, Attr.PLURAL: WordNumber.PLUR},
@@ -104,7 +99,6 @@ def test_plural_inflect2():
     p.set_words(['красивый', 'пейзаж'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.ADJ, Attr.PLURAL: WordNumber.PLUR},
@@ -122,7 +116,6 @@ def test_UN_inflect():
     p.set_words(['организация', 'объединить', 'нация'])
     p.set_deps([None, 1, -2])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.NOUN},
@@ -146,7 +139,6 @@ def test_3phrase_inflect():
     p.set_words(['результат', 'химический', 'реакция'])
     p.set_deps([None, 1, -2])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.NOUN, Attr.CASE: WordCase.LOC},
@@ -165,7 +157,6 @@ def test_inflect_phrase():
     p.set_words(['красивый', 'картина'])
     p.set_deps([1, None])
     p.set_extra([None] * len(p.get_sent_pos_list()))
-    p.set_id('_'.join(p.get_words(False)))
 
     sent = [
         {Attr.POS_TAG: PosTag.ADJ, Attr.LANG: Lang.RU},
