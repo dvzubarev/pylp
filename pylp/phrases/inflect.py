@@ -5,7 +5,7 @@ from typing import List
 
 import pymorphy2
 
-from pylp.common import Attr, Lang, PosTag, WordGender, WordVoice, WordTense, WordCase
+from pylp.common import Attr, Lang, PosTag, WordGender, WordVoice, WordTense, WordCase, SyntLink
 from pylp.phrases.builder import Phrase
 
 
@@ -85,15 +85,17 @@ class RuInflector(Inflector):
         # We can only change number of a word
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
         head_obj = sent[head_sent_pos]
+        phrase_words = phrase.get_words(False)
 
         if head_obj[Attr.POS_TAG] == PosTag.NOUN:
             if Attr.PLURAL not in head_obj:
                 return
 
-            phrase_words = phrase.get_words(False)
             form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'plur'})
             if form is not None:
                 phrase_words[head_pos] = form
+        elif head_obj[Attr.POS_TAG] == PosTag.PROPN:
+            phrase_words[head_pos] = phrase_words[head_pos].capitalize()
 
     def inflect_pair(self, phrase: Phrase, sent: List[dict], head_pos, mod_pos):
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
@@ -103,12 +105,28 @@ class RuInflector(Inflector):
 
         phrase_words = phrase.get_words(False)
         form = None
-        if head_obj[Attr.POS_TAG] == PosTag.NOUN:
-            if mod_obj[Attr.POS_TAG] == PosTag.NOUN:
+        if head_obj[Attr.POS_TAG] in (PosTag.NOUN, PosTag.PROPN):
+            if (
+                mod_obj[Attr.POS_TAG] in (PosTag.NOUN, PosTag.PROPN)
+                and mod_obj[Attr.SYNTAX_LINK_NAME] == SyntLink.NMOD
+            ):
                 number = 'plur' if Attr.PLURAL in mod_obj else 'sing'
                 form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {number, 'gent'})
+                if form is not None and mod_obj[Attr.POS_TAG] == PosTag.PROPN:
+                    form = form.capitalize()
+
                 extra = phrase.get_extra()
                 extra[mod_pos] = {Attr.CASE: WordCase.GEN}
+            elif mod_obj[Attr.POS_TAG] == PosTag.PROPN:
+                gender = self._gender2pymorphy(head_obj.get(Attr.GENDER))
+                form = None
+                if gender is not None:
+                    form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {gender})
+
+                if form is None:
+                    form = phrase_words[mod_pos]
+
+                form = form.capitalize()
             elif mod_obj[Attr.POS_TAG] in (PosTag.ADJ, PosTag.PARTICIPLE):
 
                 feats = set()
@@ -172,7 +190,12 @@ class RuInflector(Inflector):
             return None
 
         for l in inf.lexeme:
-            if l.tag.POS == 'PRTF' and l.tag.voice == voice and l.tag.tense == tense:
+            if (
+                l.tag.POS == 'PRTF'
+                and l.tag.voice == voice
+                and l.tag.tense == tense
+                and l.tag.case == 'nomn'
+            ):
                 return l
         return None
 
@@ -186,7 +209,7 @@ class RuInflector(Inflector):
             parsed = self._pymorphy_find_participle(results[0], mod_obj)
         else:
             for res in results:
-                if res.tag.POS == tag:
+                if res.tag.POS == tag and res.tag.case == 'nomn':
                     parsed = res
                     break
 

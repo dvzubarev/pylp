@@ -4,7 +4,17 @@
 
 from pylp.phrases.inflect import inflect_ru_phrase, inflect_phrase
 from pylp.phrases.builder import Phrase
-from pylp.common import Attr, PosTag, WordGender, WordTense, WordVoice, WordNumber, WordCase, Lang
+from pylp.common import (
+    Attr,
+    PosTag,
+    WordGender,
+    WordTense,
+    WordVoice,
+    WordNumber,
+    WordCase,
+    Lang,
+    SyntLink,
+)
 
 
 def test_simple_adj_inflect():
@@ -58,6 +68,24 @@ def test_simple_participle_inflect2():
     assert p.get_words(False) == ['думающая', 'голова']
 
 
+def test_participle_inflect3():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['усилить', 'половой', 'производительность'])
+    p.set_deps([2, 1, None])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.PARTICIPLE, Attr.TENSE: WordTense.PAST, Attr.VOICE: WordVoice.PASS},
+        {Attr.POS_TAG: PosTag.ADJ},
+        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['усиленная', 'половая', 'производительность']
+
+
 def test_simple_noun_inflect():
     p = Phrase()
     p.set_head_pos(0)
@@ -68,7 +96,11 @@ def test_simple_noun_inflect():
 
     sent = [
         {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM},
-        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.MASC},
+        {
+            Attr.POS_TAG: PosTag.NOUN,
+            Attr.GENDER: WordGender.MASC,
+            Attr.SYNTAX_LINK_NAME: SyntLink.NMOD,
+        },
     ]
 
     inflect_ru_phrase(p, sent)
@@ -125,7 +157,12 @@ def test_UN_inflect():
             Attr.TENSE: WordTense.PAST,
             Attr.VOICE: WordVoice.PASS,
         },
-        {Attr.POS_TAG: PosTag.NOUN, Attr.PLURAL: WordNumber.PLUR, Attr.GENDER: WordGender.FEM},
+        {
+            Attr.POS_TAG: PosTag.NOUN,
+            Attr.PLURAL: WordNumber.PLUR,
+            Attr.GENDER: WordGender.FEM,
+            Attr.SYNTAX_LINK_NAME: SyntLink.NMOD,
+        },
     ]
 
     inflect_ru_phrase(p, sent)
@@ -143,7 +180,12 @@ def test_3phrase_inflect():
     sent = [
         {Attr.POS_TAG: PosTag.NOUN, Attr.CASE: WordCase.LOC},
         {Attr.POS_TAG: PosTag.ADJ, Attr.GENDER: WordGender.FEM, Attr.CASE: WordCase.GEN},
-        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM, Attr.CASE: WordCase.GEN},
+        {
+            Attr.POS_TAG: PosTag.NOUN,
+            Attr.GENDER: WordGender.FEM,
+            Attr.CASE: WordCase.GEN,
+            Attr.SYNTAX_LINK_NAME: SyntLink.NMOD,
+        },
     ]
 
     inflect_ru_phrase(p, sent)
@@ -194,8 +236,102 @@ def test_inflect_ru_phrase3():
 
     sent = [
         {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.FEM, Attr.PLURAL: WordNumber.PLUR},
-        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.MASC},
+        {
+            Attr.POS_TAG: PosTag.NOUN,
+            Attr.GENDER: WordGender.MASC,
+            Attr.SYNTAX_LINK_NAME: SyntLink.NMOD,
+        },
     ]
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['раковины', 'стромбус']
+    assert p.get_words(False) == ['раковины', 'стромбуса']
+
+
+def test_inflect_ru_phrase4():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['живой', 'глаз'])
+    p.set_deps([1, None])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.ADJ, Attr.PLURAL: WordNumber.PLUR},
+        {Attr.POS_TAG: PosTag.NOUN, Attr.GENDER: WordGender.MASC, Attr.PLURAL: WordNumber.PLUR},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['живые', 'глаза']
+
+
+def test_ru_propn_inflect1():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['бригадир', 'владычин'])
+    p.set_deps([None, -1])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.NOUN},
+        {Attr.POS_TAG: PosTag.PROPN, Attr.SYNTAX_LINK_NAME: SyntLink.APPOS},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['бригадир', 'Владычин']
+
+
+def test_ru_propn_inflect2():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['шляпа', 'валентина'])
+    p.set_deps([None, -1])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.NOUN},
+        {Attr.POS_TAG: PosTag.PROPN, Attr.SYNTAX_LINK_NAME: SyntLink.NMOD},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['шляпа', 'Валентины']
+
+
+def test_ru_propn_inflect3():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['иван', 'иванов'])
+    p.set_deps([None, -1])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.PROPN},
+        {Attr.POS_TAG: PosTag.PROPN, Attr.SYNTAX_LINK_NAME: SyntLink.FLAT},
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['Иван', 'Иванов']
+
+
+def test_ru_propn_inflect4():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['красивый', 'валентина', 'иванов'])
+    p.set_deps([1, None, -1])
+    p.set_extra([None] * len(p.get_sent_pos_list()))
+
+    sent = [
+        {Attr.POS_TAG: PosTag.ADJ},
+        {Attr.POS_TAG: PosTag.PROPN, Attr.GENDER: WordGender.FEM},
+        {
+            Attr.POS_TAG: PosTag.PROPN,
+            Attr.GENDER: WordGender.FEM,
+            Attr.SYNTAX_LINK_NAME: SyntLink.FLAT,
+        },
+    ]
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['красивая', 'Валентина', 'Иванова']
