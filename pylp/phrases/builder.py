@@ -508,13 +508,13 @@ class BasicPhraseBuilder:
     def _test_head(self, word_obj: dict, pos: int, sent: Sent, mods_index):
         raise NotImplementedError("_test_head")
 
-    def build_phrases_for_sent(self, sent, words, word_ids=None):
+    def build_phrases_for_sent(self, sent, words=None, word_ids=None):
         if len(sent) > 4096:
             raise RuntimeError("Sent size limit!")
-        sent = Sent(sent, words, word_ids=word_ids)
+        sent = Sent(sent, words=words, word_ids=word_ids)
         return self._build_phrases_impl(sent)
 
-    def build_phrases_for_sents(self, sents, words, word_ids=None):
+    def build_phrases_for_sents(self, sents, words=None, word_ids=None):
         sent_phrases = []
         for sent in sents:
             phrases = self.build_phrases_for_sent(sent, words, word_ids=word_ids)
