@@ -387,3 +387,87 @@ def test_phrase_id_with_prepositions():
     assert len(phrases) == 1
     phrase_id2 = phrases[0].get_id()
     assert phrase_id != phrase_id2
+
+
+def test_overlap():
+    sent, words = _create_complex_sent()
+    phrase_builder = TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    r_h1_m5_h2 = None
+    r_h1_m4_h2 = None
+    h1_m4_h2 = None
+    m4_h2 = None
+    h1_h2 = None
+    for p in phrases:
+        pstr = _p2str(p)
+        if pstr == "r_h1_m5_h2":
+            r_h1_m5_h2 = p
+        elif pstr == "r_h1_m4_h2":
+            r_h1_m4_h2 = p
+        elif pstr == "h1_m4_h2":
+            h1_m4_h2 = p
+        elif pstr == "m4_h2":
+            m4_h2 = p
+        elif pstr == "h1_h2":
+            h1_h2 = p
+
+    assert r_h1_m4_h2 is not None
+    assert r_h1_m5_h2 is not None
+    assert h1_m4_h2 is not None
+    assert m4_h2 is not None
+    assert h1_h2 is not None
+    assert r_h1_m4_h2.intersects(r_h1_m5_h2)
+    assert r_h1_m5_h2.intersects(r_h1_m4_h2)
+    assert r_h1_m4_h2.overlaps(r_h1_m5_h2)
+    assert r_h1_m5_h2.overlaps(r_h1_m4_h2)
+    assert r_h1_m4_h2.overlaps(h1_m4_h2)
+    assert not h1_m4_h2.overlaps(r_h1_m4_h2)
+    assert h1_m4_h2.overlaps(h1_h2)
+    assert h1_h2.overlaps(h1_m4_h2)
+    assert not h1_h2.overlaps(r_h1_m4_h2)
+    assert h1_h2.intersects(r_h1_m4_h2)
+    assert m4_h2.intersects(h1_h2)
+    assert not m4_h2.overlaps(h1_h2)
+    assert h1_m4_h2.overlaps(m4_h2)
+    assert not m4_h2.overlaps(h1_m4_h2)
+
+
+def test_contains():
+    sent, words = _create_complex_sent()
+    phrase_builder = TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    r_h1_m5_h2 = None
+    r_h1_m4_h2 = None
+    h1_m4_h2 = None
+    m4_h2 = None
+    h1_h2 = None
+    for p in phrases:
+        pstr = _p2str(p)
+        if pstr == "r_h1_m5_h2":
+            r_h1_m5_h2 = p
+        elif pstr == "r_h1_m4_h2":
+            r_h1_m4_h2 = p
+        elif pstr == "h1_m4_h2":
+            h1_m4_h2 = p
+        elif pstr == "m4_h2":
+            m4_h2 = p
+        elif pstr == "h1_h2":
+            h1_h2 = p
+
+    assert r_h1_m4_h2 is not None
+    assert r_h1_m5_h2 is not None
+    assert h1_m4_h2 is not None
+    assert m4_h2 is not None
+    assert h1_h2 is not None
+
+    assert not r_h1_m4_h2.contains(r_h1_m5_h2)
+    assert not r_h1_m5_h2.contains(r_h1_m4_h2)
+    assert not r_h1_m5_h2.contains(h1_m4_h2)
+    assert r_h1_m4_h2.contains(h1_m4_h2)
+    assert r_h1_m4_h2.contains(h1_h2)
+    assert r_h1_m5_h2.contains(h1_h2)
+    assert h1_m4_h2.contains(h1_h2)
+    assert not r_h1_m5_h2.contains(m4_h2)
+    assert r_h1_m4_h2.contains(m4_h2)
+    assert not m4_h2.contains(h1_m4_h2)
+    assert not m4_h2.contains(r_h1_m4_h2)

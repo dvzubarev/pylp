@@ -194,6 +194,35 @@ class Phrase:
     def get_id(self):
         return self._id_holder.get_id()
 
+    def intersects(self, other: "Phrase"):
+        other_pos_list = other.get_sent_pos_list()
+        return not (
+            self._sent_pos_list[-1] < other_pos_list[0]
+            or self._sent_pos_list[0] > other_pos_list[-1]
+        )
+
+    def overlaps(self, other: "Phrase"):
+        other_pos_list = other.get_sent_pos_list()
+        return (
+            self._sent_pos_list[0] <= other_pos_list[0]
+            and self._sent_pos_list[-1] >= other_pos_list[-1]
+        )
+
+    def contains(self, other: "Phrase"):
+        if not self.overlaps(other):
+            return False
+        other_pos_list = other.get_sent_pos_list()
+        i = j = 0
+        while i < len(other_pos_list):
+            if other_pos_list[i] < self._sent_pos_list[j]:
+                return False
+            if other_pos_list[i] == self._sent_pos_list[j]:
+                j += 1
+                i += 1
+            else:
+                j += 1
+        return True
+
     def __repr__(self) -> str:
         return f"Phrase(id={self.get_id()}, words= {self.get_words()})"
 
@@ -223,23 +252,49 @@ def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: Sent):
     return p
 
 
-def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phrases_cache):
-    new_mod_sz = other_phrase.size()
-    old_head_pos = head_pos = head_phrase.get_head_pos()
-
+def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
     head_pos_list = head_phrase.get_sent_pos_list()
-    other_on_left = head_phrase.sent_hp() > other_phrase.sent_hp()
-    if not other_on_left:
+    other_pos_list = other_phrase.get_sent_pos_list()
+    if head_phrase.sent_hp() < other_phrase.sent_hp():
         # The modificator is on the right side
         insert_pos = len(head_pos_list)
         while other_phrase.sent_hp() < head_pos_list[insert_pos - 1]:
             insert_pos -= 1
     else:
         # The modificator is on the left side
-        head_pos += new_mod_sz
         insert_pos = 0
         while other_phrase.sent_hp() > head_pos_list[insert_pos]:
             insert_pos += 1
+
+    if insert_pos > 0 and head_pos_list[insert_pos - 1] > other_pos_list[0]:
+        logging.warning(
+            "modificator overlaps with head phrase on the left: head=%s; mod=%s",
+            head_phrase,
+            other_phrase,
+        )
+        return None
+    if insert_pos < len(head_pos_list) and head_pos_list[insert_pos] < other_pos_list[-1]:
+        logging.warning(
+            "modificator overlaps with head phrase on the right: head=%s; mod=%s",
+            head_phrase,
+            other_phrase,
+        )
+        return None
+    return insert_pos
+
+
+def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phrases_cache):
+    new_mod_sz = other_phrase.size()
+    old_head_pos = head_pos = head_phrase.get_head_pos()
+
+    head_pos_list = head_phrase.get_sent_pos_list()
+    other_on_left = head_phrase.sent_hp() > other_phrase.sent_hp()
+    if other_on_left:
+        head_pos += new_mod_sz
+
+    insert_pos = _find_insert_pos(head_phrase, other_phrase)
+    if insert_pos is None:
+        return None
 
     phrase_signature = (
         head_pos_list[:insert_pos] + other_phrase.get_sent_pos_list() + head_pos_list[insert_pos:]
