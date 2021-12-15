@@ -2,7 +2,6 @@
 # coding: utf-8
 
 
-from pylp.utils import make_words_dict
 from pylp.common import Attr
 import pylp.converter as conv
 
@@ -10,12 +9,14 @@ import pylp.converter as conv
 ###Annotations convertors
 
 
-class LemmaConv:
-    def __init__(self, lemmas_dict):
-        self._lemmas_dict = lemmas_dict
+class FormConv:
+    def __call__(self, pos, form):
+        return [(Attr.WORD_FORM, form)]
 
+
+class LemmaConv:
     def __call__(self, pos, lemma):
-        return [(Attr.WORD_NUM, self._lemmas_dict[lemma])]
+        return [(Attr.WORD_LEMMA, lemma)]
 
 
 class SyntConv(conv.SyntConv):
@@ -43,16 +44,14 @@ def convert_to_json(annotations, calc_stat=False, analyze_opts: dict = None):
     result = {}
     result['lang'] = conv.convert_lang(annotations['lang'])
 
-    flatten_lemmas, lemmas_dict = make_words_dict(annotations['lemma'])
-    result['words'] = flatten_lemmas
-
     converters = [
         ('tokens', TokensConv()),
+        ('form', FormConv()),
     ]
     if analyze_opts.get('tagger', '') != 'none':
         converters.extend(
             [
-                ('lemma', LemmaConv(lemmas_dict)),
+                ('lemma', LemmaConv()),
                 ('morph', MorphConv(calc_stat=calc_stat)),
             ]
         )

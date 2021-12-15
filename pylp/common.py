@@ -11,8 +11,8 @@ def _enum2str(enum_val):
 
 def _make_dict_for_enum(enum_cls, translator=None):
     if translator is None:
-        return {_enum2str(v): int(v) for v in enum_cls}
-    return {translator[_enum2str(v)]: int(v) for v in enum_cls}
+        return {_enum2str(v): v for v in enum_cls}
+    return {translator[_enum2str(v)]: v for v in enum_cls}
 
 
 def _make_list_for_enum(enum_cls):
@@ -178,6 +178,8 @@ UNDEF_WORD_NUM = -1
 #ATTRIBUTES
 class Attr:
     WORD_NUM         = 'i'
+    WORD_FORM        = 'form' #not for storing in textdb
+    WORD_LEMMA       = 'lemma'
     IS_QUESTION      = 'Q'
     LANG             = 'L'
     HOMONYM          = 'H'

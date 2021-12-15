@@ -4,7 +4,6 @@
 
 import logging
 
-import pymorphy2
 import libpyexbase
 
 
@@ -12,7 +11,6 @@ from pylp.filtratus import Filtratus
 from pylp.common import Attr
 from pylp.common import PosTag
 from pylp.common import SyntLink
-from pylp.common import WordGender
 from pylp.common import PREP_WHITELIST
 
 
@@ -43,8 +41,6 @@ def create_postprocessor(kind, **kwargs):
         return FragmentsMaker(**kwargs)
     if kind == WordLangDetector.name:
         return WordLangDetector(**kwargs)
-    if kind == FixNorms.name:
-        return FixNorms(**kwargs)
     raise RuntimeError("Unknown postprocessor: %s" % kind)
 
 
@@ -159,112 +155,3 @@ class WordLangDetector(AbcPostProcessor):
                 word_lang = langs[word_obj[Attr.WORD_NUM]]
                 if word_lang != doc_lang:
                     word_obj[Attr.LANG] = word_lang
-
-
-class FixNorms(AbcPostProcessor):
-    name = "fix_norms"
-
-    def __init__(self, **kwargs):
-        self._morph = pymorphy2.MorphAnalyzer()
-        self._fix_tags = frozenset(
-            [PosTag.ADJ, PosTag.NOUN, PosTag.PARTICIPLE, PosTag.ADV, PosTag.VERB]
-        )
-
-        self._pos_tag_mapping = {
-            PosTag.ADJ: 'ADJF',
-            PosTag.NOUN: 'NOUN',
-            PosTag.PARTICIPLE: 'PRTF',
-            PosTag.ADV: 'ADVB',
-            PosTag.VERB: 'VERB',
-        }
-        self._gender_mapping = {
-            WordGender.MASC: 'masc',
-            WordGender.FEM: 'femn',
-            WordGender.NEUT: 'neut',
-        }
-
-        self._rev_gender_mapping = {v: k for k, v in self._gender_mapping.items()}
-
-    def _find_norm(self, current_norm, morphy_tag, results):
-        for res in results:
-            if res.tag.POS == morphy_tag and res.normal_form == current_norm:
-                # logging.debug("Found the same norm for res: %s", res)
-                return None
-        for res in results:
-            if res.tag.POS == morphy_tag:
-                return res.normal_form
-        return None
-
-    def __call__(self, text, doc_obj):
-        words = doc_obj['words']
-        parsed_cache = {}
-
-        fixed_norms = fixed_gender = fixed_plural = not_found = 0
-
-        for sent in doc_obj['sents']:
-            for word_obj in sent:
-                word_num = word_obj[Attr.WORD_NUM]
-                pos_tag = word_obj.get(Attr.POS_TAG)
-                if pos_tag not in self._fix_tags:
-                    continue
-                off = word_obj[Attr.OFFSET]
-                word = text[off : off + word_obj[Attr.LENGTH]]
-                if word not in parsed_cache:
-                    parsed_cache[word] = self._morph.parse(word)
-                results = parsed_cache[word]
-
-                if all(r.tag.POS == 'INFN' for r in results):
-                    continue
-                morphy_tag = self._pos_tag_mapping[pos_tag]
-                norm = self._find_norm(words[word_num], morphy_tag, results)
-                if norm is not None:
-                    logging.debug(
-                        "fixing norm for form %s: %s -> %s (%s)",
-                        word,
-                        words[word_num],
-                        norm,
-                        word_num,
-                    )
-                    fixed_norms += 1
-                    words[word_num] = norm
-
-                found = False
-                for res in results:
-                    if res.tag.POS == morphy_tag:
-                        found = True
-
-                        gender = word_obj.get(Attr.GENDER)
-
-                        if gender is not None and self._gender_mapping[gender] != res.tag.gender:
-                            g = self._rev_gender_mapping.get(res.tag.gender)
-                            if g is not None:
-                                logging.debug(
-                                    "fixing gender for %s: %s -> %s",
-                                    words[word_num],
-                                    self._gender_mapping[gender],
-                                    res.tag.gender,
-                                )
-                                fixed_gender += 1
-                                word_obj[Attr.GENDER] = g
-
-                        number = 'plur' if Attr.PLURAL in word_obj else 'sing'
-
-                        if res.tag.number and number != res.tag.number:
-                            fixed_plural += 1
-                            logging.debug(
-                                "fixing plural for %s: %s -> %s", word, number, res.tag.number
-                            )
-                            if res.tag.number == 'plur':
-                                word_obj[Attr.PLURAL] = 1
-                            if res.tag.number == 'sing':
-                                del word_obj[Attr.PLURAL]
-
-                        break
-                not_found += not found
-        logging.info(
-            "Fixed %s norms, %s genders, %s plurs, not found forms %s",
-            fixed_norms,
-            fixed_gender,
-            fixed_plural,
-            not_found,
-        )

@@ -471,3 +471,4 @@ def test_contains():
     assert r_h1_m4_h2.contains(m4_h2)
     assert not m4_h2.contains(h1_m4_h2)
     assert not m4_h2.contains(r_h1_m4_h2)
+    assert m4_h2.contains(m4_h2)
