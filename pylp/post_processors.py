@@ -39,8 +39,6 @@ def create_postprocessor(kind, **kwargs):
         return PrepositionCompressor(**kwargs)
     if kind == FragmentsMaker.name:
         return FragmentsMaker(**kwargs)
-    if kind == WordLangDetector.name:
-        return WordLangDetector(**kwargs)
     raise RuntimeError("Unknown postprocessor: %s" % kind)
 
 
@@ -138,20 +136,3 @@ class FragmentsMaker(AbcPostProcessor):
 
         logging.debug("created %d fragments", len(fragments))
         doc_obj['fragments'] = fragments
-
-
-class WordLangDetector(AbcPostProcessor):
-    name = "word_lang_detector"
-
-    def __init__(self, **kwargs):
-        pass
-
-    def __call__(self, text, doc_obj):
-        doc_lang = doc_obj['lang']
-        langs = libpyexbase.lang_of_words(doc_obj['words'])
-
-        for sent in doc_obj['sents']:
-            for word_obj in sent:
-                word_lang = langs[word_obj[Attr.WORD_NUM]]
-                if word_lang != doc_lang:
-                    word_obj[Attr.LANG] = word_lang

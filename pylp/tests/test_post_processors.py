@@ -4,7 +4,7 @@
 import pytest
 
 from pylp.common import Attr
-from pylp.post_processors import FragmentsMaker, WordLangDetector
+from pylp.post_processors import FragmentsMaker
 
 
 @pytest.fixture
@@ -166,23 +166,3 @@ def test_overlap_at_the_end(fragments_maker):
     assert fragments[0] == (0, 3)
     assert fragments[1] == (2, 5)
     assert fragments[2] == (4, 7)
-
-
-def test_word_lang_detector():
-    detector = WordLangDetector()
-    doc_obj = {
-        'lang': 0,
-        'words': ['язык', 'lang', '15'],
-        'sents': [
-            [{Attr.WORD_NUM: 0}, {Attr.WORD_NUM: 2}],
-            [{Attr.WORD_NUM: 1}, {Attr.WORD_NUM: 0}, {Attr.WORD_NUM: 0}],
-        ],
-    }
-    detector('', doc_obj)
-    assert Attr.LANG not in doc_obj['sents'][0][0]
-    assert Attr.LANG in doc_obj['sents'][0][1]
-    assert doc_obj['sents'][0][1][Attr.LANG] == 15
-    assert Attr.LANG in doc_obj['sents'][1][0]
-    assert doc_obj['sents'][1][0][Attr.LANG] == 1
-    assert Attr.LANG not in doc_obj['sents'][1][1]
-    assert Attr.LANG not in doc_obj['sents'][1][2]
