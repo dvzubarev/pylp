@@ -86,6 +86,21 @@ class DeterminatusFiltratus(AbcFilter):
         return False
 
 
+class CommonAuxFiltratus(AbcFilter):
+    name = 'common_aux'
+
+    def __init__(self, **kwargs):
+        self._common_aux = frozenset(['be', 'have'])
+
+    def filter(self, word_obj, word_pos, sent, ctx):
+        if (
+            word_obj[Attr.POS_TAG] == PosTag.AUX
+            and ctx.word_strings[word_obj[Attr.WORD_NUM]] in self._common_aux
+        ):
+            return True
+        return False
+
+
 class StopWordsFiltratus(AbcFilter):
     name = 'stopwords'
 
@@ -163,6 +178,8 @@ def create_filtratus(kind='', **kwargs):
         return PunctAndUndefFiltratus(**kwargs)
     if kind == DeterminatusFiltratus.name:
         return DeterminatusFiltratus(**kwargs)
+    if kind == CommonAuxFiltratus.name:
+        return CommonAuxFiltratus(**kwargs)
     if kind == StopWordsFiltratus.name:
         return StopWordsFiltratus(**kwargs)
     if kind == NumAndUndefLangFiltratus.name:
