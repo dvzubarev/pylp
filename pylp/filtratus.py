@@ -70,7 +70,7 @@ class PunctAndUndefFiltratus(AbcFilter):
 
     def filter(self, word_obj, word_pos, sent, ctx):
         if (
-            word_obj.get(Attr.POS_TAG, PosTag.UNDEF) in (PosTag.UNDEF, PosTag.PUNCT)
+            word_obj.get(Attr.POS_TAG, PosTag.UNDEF) in (PosTag.UNDEF, PosTag.PUNCT, PosTag.X)
             and word_obj.get(Attr.SYNTAX_LINK_NAME, SyntLink.PUNCT) == SyntLink.PUNCT
         ):
             return True
@@ -130,6 +130,7 @@ class StopWordsFiltratus(AbcFilter):
                     PosTag.SCONJ,
                     PosTag.CCONJ,
                     PosTag.SYM,
+                    PosTag.X,
                 ]
             )
         else:

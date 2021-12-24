@@ -109,7 +109,7 @@ class PosTag(enum.IntEnum):
 POS_TAG_DICT = _make_dict_for_enum(PosTag)
 
 STOP_WORD_POS_TAGS = [PosTag.AUX, PosTag.CCONJ, PosTag.SCONJ, PosTag.SYM,
-                      PosTag.PART, PosTag.ADP, PosTag.PRON]
+                      PosTag.PART, PosTag.ADP, PosTag.PRON, PosTag.X]
 
 class WordNumber(enum.IntEnum):
     SING = 0
