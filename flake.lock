@@ -1,0 +1,107 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1641726770,
+        "narHash": "sha256-7Wk3V+/gNbQ4/5LgGQz9KVSwSw3V/L3+iqgH8+G/6V0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "27d2fe1e69deb1894f9113a1fe2ca43fb89c8ad1",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "rev": "27d2fe1e69deb1894f9113a1fe2ca43fb89c8ad1",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1641726770,
+        "narHash": "sha256-7Wk3V+/gNbQ4/5LgGQz9KVSwSw3V/L3+iqgH8+G/6V0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "27d2fe1e69deb1894f9113a1fe2ca43fb89c8ad1",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "rev": "27d2fe1e69deb1894f9113a1fe2ca43fb89c8ad1",
+        "type": "indirect"
+      }
+    },
+    "pyexbase": {
+      "inputs": {
+        "nixpkgs": [
+          "pyexbase",
+          "textapp-pkgs",
+          "nixpkgs"
+        ],
+        "textapp-pkgs": "textapp-pkgs"
+      },
+      "locked": {
+        "lastModified": 1642243930,
+        "narHash": "sha256-Q+lK9b/JiqHWJ/xsu+2qT4smUtTkVRMDbHsLD5wAQqk=",
+        "ref": "master",
+        "rev": "852dbcd983a68279c59ff8ce3dd76aa81f9f62a5",
+        "revCount": 9,
+        "type": "git",
+        "url": "ssh://git@ids/textapp/pyexbase"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@ids/textapp/pyexbase"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": [
+          "textapp-pkgs",
+          "nixpkgs"
+        ],
+        "pyexbase": "pyexbase",
+        "textapp-pkgs": "textapp-pkgs_2"
+      }
+    },
+    "textapp-pkgs": {
+      "inputs": {
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1642243572,
+        "narHash": "sha256-Fv8gcgpPMvFFQziKiJVUWkiFtn4sA0Z/mzDB9/gBpZo=",
+        "ref": "flakes",
+        "rev": "04900e12bdf5f6d01369351e3d2e4a525ebd5533",
+        "revCount": 91,
+        "type": "git",
+        "url": "ssh://git@ids/textapp/textapp-pkgs"
+      },
+      "original": {
+        "ref": "flakes",
+        "type": "git",
+        "url": "ssh://git@ids/textapp/textapp-pkgs"
+      }
+    },
+    "textapp-pkgs_2": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1642243572,
+        "narHash": "sha256-Fv8gcgpPMvFFQziKiJVUWkiFtn4sA0Z/mzDB9/gBpZo=",
+        "ref": "flakes",
+        "rev": "04900e12bdf5f6d01369351e3d2e4a525ebd5533",
+        "revCount": 91,
+        "type": "git",
+        "url": "ssh://git@ids/textapp/textapp-pkgs"
+      },
+      "original": {
+        "ref": "flakes",
+        "type": "git",
+        "url": "ssh://git@ids/textapp/textapp-pkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
