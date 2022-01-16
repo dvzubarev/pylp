@@ -8,17 +8,16 @@
   outputs = { self, nixpkgs, textapp-pkgs, pyexbase }:
     let pkgs = import nixpkgs {
           system = "x86_64-linux";
-          overlays = [ textapp-pkgs.overlay pyexbase.overlay self.overlay ];
+          overlays = [ textapp-pkgs.overlay  self.overlay ];
         };
+        python-overlay = pyfinal: pyprev: {pylp = pyfinal.callPackage ./nix {src=self;};};
     in {
-      overlay = final: prev:
-        let merged-overlay = pkgs.lib.composeExtensions
-          prev.python-overlay
-          (pyfinal: pyprev: {pylp = pyfinal.callPackage ./nix {src=self;};});
-        in {
-          python-overlay = merged-overlay;
-          python = prev.base-python.override{packageOverrides = merged-overlay;};
-        };
+      overlay = textapp-pkgs.lib.composeManyExtensions [
+        pyexbase.overlay
+        (
+          final: prev: {python = textapp-pkgs.lib.overridePython python-overlay final prev;}
+        )
+      ];
       packages.x86_64-linux = {
         inherit (pkgs)
           python;
