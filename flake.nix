@@ -1,9 +1,16 @@
 {
   description = "Python library for linguistic processing";
 
-  inputs.textapp-pkgs.url = "git+ssh://git@ids/textapp/textapp-pkgs?ref=flakes";
-  inputs.nixpkgs.follows = "textapp-pkgs/nixpkgs";
-  inputs.pyexbase.url = "git+ssh://git@ids/textapp/pyexbase";
+  inputs = {
+    textapp-pkgs.url = "git+ssh://git@ids/textapp/textapp-pkgs?ref=flakes";
+    nixpkgs.follows = "textapp-pkgs/nixpkgs";
+    pyexbase.url = "git+ssh://git@ids/textapp/pyexbase";
+    pyexbase.inputs = {
+      textapp-pkgs.follows = "textapp-pkgs";
+      nixpkgs.follows = "nixpkgs";
+    };
+
+  };
 
   outputs = { self, nixpkgs, textapp-pkgs, pyexbase }:
     let pkgs = import nixpkgs {

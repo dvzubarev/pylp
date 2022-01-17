@@ -1,8 +1,9 @@
+import os
 from setuptools import setup, find_packages
 
 setup(
     name='pylp',
-    version='0.1',
+    version=os.environ.get('version', '0'),
     description='linguistic',
     author='dvzubarev',
     author_email='zubarev@isa.ru',
