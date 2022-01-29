@@ -25,17 +25,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1642342838,
-        "narHash": "sha256-o4yAbmSX5hY3dCQ6DCtG+ZCsdMvqb2DUUkgldmlyy+g=",
+        "lastModified": 1643464377,
+        "narHash": "sha256-ZBotwne2KQPKlxqGEnP7Lc080JLX+16ikuhlzJ3TrII=",
         "ref": "master",
-        "rev": "d141151ec51283d76d5d341007d7ca944566efb5",
-        "revCount": 10,
+        "rev": "f228ac52c7849ce6fad844ff15e112e34075cc35",
+        "revCount": 12,
         "type": "git",
-        "url": "ssh://git@ids/textapp/pyexbase"
+        "url": "ssh://git@tsa04.isa.ru/textapp/pyexbase"
       },
       "original": {
         "type": "git",
-        "url": "ssh://git@ids/textapp/pyexbase"
+        "url": "ssh://git@tsa04.isa.ru/textapp/pyexbase"
       }
     },
     "root": {
@@ -59,12 +59,12 @@
         "rev": "376f13b8e54d291ba4ba73cf94edb766ae411414",
         "revCount": 92,
         "type": "git",
-        "url": "ssh://git@ids/textapp/textapp-pkgs"
+        "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },
       "original": {
         "ref": "flakes",
         "type": "git",
-        "url": "ssh://git@ids/textapp/textapp-pkgs"
+        "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       }
     }
   },

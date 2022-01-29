@@ -2,9 +2,9 @@
   description = "Python library for linguistic processing";
 
   inputs = {
-    textapp-pkgs.url = "git+ssh://git@ids/textapp/textapp-pkgs?ref=flakes";
+    textapp-pkgs.url = "git+ssh://git@tsa04.isa.ru/textapp/textapp-pkgs?ref=flakes";
     nixpkgs.follows = "textapp-pkgs/nixpkgs";
-    pyexbase.url = "git+ssh://git@ids/textapp/pyexbase";
+    pyexbase.url = "git+ssh://git@tsa04.isa.ru/textapp/pyexbase";
     pyexbase.inputs = {
       textapp-pkgs.follows = "textapp-pkgs";
       nixpkgs.follows = "nixpkgs";
@@ -25,6 +25,8 @@
           final: prev: {python = textapp-pkgs.lib.overridePython python-overlay final prev;}
         )
       ];
+
+      defaultPackage.x86_64-linux = pkgs.python.pkgs.pylp;
       packages.x86_64-linux = {
         inherit (pkgs)
           python;
