@@ -3,17 +3,17 @@
 
   inputs = {
     textapp-pkgs.url = "git+ssh://git@tsa04.isa.ru/textapp/textapp-pkgs?ref=flakes";
-    nixpkgs.follows = "textapp-pkgs/nixpkgs";
     pyexbase.url = "git+ssh://git@tsa04.isa.ru/textapp/pyexbase";
-    pyexbase.inputs = {
-      textapp-pkgs.follows = "textapp-pkgs";
-      nixpkgs.follows = "nixpkgs";
-    };
+
+    #TODO uncomment when fixed in nix
+    # pyexbase.inputs = {
+    #   textapp-pkgs.follows = "textapp-pkgs";
+    # };
 
   };
 
-  outputs = { self, nixpkgs, textapp-pkgs, pyexbase }:
-    let pkgs = import nixpkgs {
+  outputs = { self,  textapp-pkgs, pyexbase }:
+    let pkgs = import textapp-pkgs.inputs.nixpkgs {
           system = "x86_64-linux";
           overlays = [ textapp-pkgs.overlay  self.overlay ];
         };
