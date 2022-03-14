@@ -62,15 +62,15 @@ class MorphConv:
     def _adjust_verb(self, morph_feats, fields):
         if 'VerbForm' in morph_feats:
             if morph_feats['VerbForm'] == 'Part':
-                if 'Variant' in morph_feats and morph_feats['Variant'] == 'Brev':
+                if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
                     fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE_SHORT)
                 else:
-                    fields[-1] = ('p', PosTag.PARTICIPLE)
+                    fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE)
             elif morph_feats['VerbForm'] == 'Ger':
                 fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE_ADVERB)
 
     def _adjust_adj(self, morph_feats, fields):
-        if 'Variant' in morph_feats and morph_feats['Variant'] == 'Brev':
+        if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
             fields[-1] = (Attr.POS_TAG, PosTag.ADJ_SHORT)
 
     def __call__(self, pos, tag, morph_feats):
