@@ -5,10 +5,9 @@
     textapp-pkgs.url = "git+ssh://git@tsa04.isa.ru/textapp/textapp-pkgs?ref=flakes";
     pyexbase.url = "git+ssh://git@tsa04.isa.ru/textapp/pyexbase";
 
-    #TODO uncomment when fixed in nix
-    # pyexbase.inputs = {
-    #   textapp-pkgs.follows = "textapp-pkgs";
-    # };
+    pyexbase.inputs = {
+      textapp-pkgs.follows = "textapp-pkgs";
+    };
 
   };
 
