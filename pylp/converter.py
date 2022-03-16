@@ -66,7 +66,7 @@ class MorphConv:
                     fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE_SHORT)
                 else:
                     fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE)
-            elif morph_feats['VerbForm'] == 'Ger':
+            elif morph_feats['VerbForm'] in ('Ger', 'Conv'):
                 fields[-1] = (Attr.POS_TAG, PosTag.PARTICIPLE_ADVERB)
 
     def _adjust_adj(self, morph_feats, fields):
