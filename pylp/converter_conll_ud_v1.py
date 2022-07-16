@@ -1,110 +1,29 @@
 import logging
 from io import StringIO
 
-# Vendored from isanlp
+from pylp import common
+from pylp import lp_doc
+
+# inspired by the code from isanlp
 # https://github.com/IINemo/isanlp
-
-
-class Span:
-    """Basic class for span-type annotations in text.
-
-    Class members:
-        begin - span offset begin.
-        end - span offset end.
-
-    """
-
-    def __init__(self, begin=-1, end=-1):
-        self.begin = begin
-        self.end = end
-
-    def left_overlap(self, other):
-        """Checks whether the current span overlaps with other span on the left side."""
-
-        return (
-            self.begin <= other.begin
-            and self.end <= other.end
-            and self.end > other.begin
-            or self.begin >= other.begin
-            and self.end <= other.end
-        )
-
-    def overlap(self, other):
-        """Checks whether the current span oeverlaps with other span."""
-
-        return self.left_overlap(other) or other.left_overlap(self)
-
-    def __str__(self):
-        return '<{}, {}>'.format(self.begin, self.end)
-
-    def __eq__(self, other):
-        return self.begin == other.begin and self.end == other.end
-
-
-class Token(Span):
-    """Token class that expands span with its text representation in text."""
-
-    def __init__(self, text, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.text = text
-
-
-class Sentence:
-    """Sentence specified by starting token number and ending token number."""
-
-    def __init__(self, begin, end):
-        self.begin = begin
-        self.end = end
-
-
-class WordSynt:
-    """Node in syntax dependency tree."""
-
-    def __init__(self, parent, link_name):
-        self.parent = parent
-        self.link_name = link_name
-
-
-class ConllFormatSentenceParser:
-    """Parses annotations of a single sentence in CONLL-X format aquired from stream."""
-
-    def __init__(self, string_io):
-        self.string_ = string_io
-        self.stop_ = False
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if not self.stop_:
-            line = self.string_.readline().rstrip('\n')
-            if not line:
-                self.stop_ = True
-            else:
-                return line.strip().split('\t')
-
-        raise StopIteration()
 
 
 class ConllFormatStreamParser:
     """Parses annotations of a text document in CONLL-X format aquired from stream."""
 
     def __init__(self, string):
-        self.string_io_ = StringIO(string)
-        self.stop_ = False
+        self._string_io = StringIO(string)
 
     def __iter__(self):
-        return self
-
-    def __next__(self):
-        if not self.stop_:
-            sent_parser = ConllFormatSentenceParser(self.string_io_)
-            result = list(sent_parser)
-            if not result:
-                self.stop_ = True
+        sent = []
+        for l in self._string_io:
+            l = l.strip()
+            if not l:
+                if sent:
+                    yield sent
+                sent = []
             else:
-                return result
-        raise StopIteration()
+                sent.append(l.split('\t'))
 
 
 class ConverterConllUDV1:
@@ -115,50 +34,40 @@ class ConverterConllUDV1:
     HEAD = 6
     DEPREL = 7
 
-    def __call__(self, conll_raw_text):
+    def __call__(self, text, conll_raw_text) -> lp_doc.Doc:
         """Performs conll text parsing.
 
         Args:
             text(str): text.
 
         Returns:
-            Dictionary that contains:
-            1. form - list of lists with forms of words.
-            2. lemma - list of lists of strings that represent lemmas of words.
-            3. postag - list of lists of strings that represent postags of words.
-            4. morph - list of lists of strings that represent morphological features.
-            5. syntax_dep_tree - list of lists of objects WordSynt that represent a dependency tree
+        lp_doc.Doc
         """
+        doc = lp_doc.Doc()
 
+        cur_text_pos = 0
         try:
-            result_form = []
-            result_lemma = []
-            result_postag = []
-            result_morph = []
-            result_synt = []
+            for conllu_sent in ConllFormatStreamParser(conll_raw_text):
 
-            for sent in ConllFormatStreamParser(conll_raw_text):
-                new_sent_form = []
-                new_sent_lemma = []
-                new_sent_postag = []
-                new_sent_morph = []
-                new_sent_synt = []
+                sent = lp_doc.Sent()
 
-                for word in sent:
-                    if word[0][0] != '#':
-                        new_sent_form.append(word[self.FORM])
-                        new_sent_lemma.append(word[self.LEMMA])
-                        new_sent_postag.append(word[self.POSTAG])
-                        new_sent_morph.append(self._parse_morphology(word[self.MORPH]))
-                        new_sent_synt.append(
-                            self._parse_synt_tree(word[self.HEAD], word[self.DEPREL])
+                for word in conllu_sent:
+                    if word[0].startswith('#'):
+                        continue
+                    word_obj = self._create_word_obj(len(sent), word)
+
+                    # set offsets of a word in the text
+                    begin = text.find(word_obj.form, cur_text_pos)
+                    if begin == -1:
+                        raise RuntimeError(
+                            f"Failed to find form {word_obj.form} in text: {text[cur_text_pos: 50]}"
                         )
+                    word_obj.offset = begin
+                    word_obj.len = len(word_obj.form)
+                    cur_text_pos = begin + word_obj.len
 
-                result_form.append(new_sent_form)
-                result_lemma.append(new_sent_lemma)
-                result_postag.append(new_sent_postag)
-                result_morph.append(new_sent_morph)
-                result_synt.append(new_sent_synt)
+                    sent.add_word(word_obj)
+                doc.add_sent(sent)
 
         except IndexError as err:
             logging.error('Err: Index error: %s', err)
@@ -167,58 +76,88 @@ class ConverterConllUDV1:
             logging.error('--------------------------------')
             raise
 
-        return {
-            'form': result_form,
-            'lemma': result_lemma,
-            'postag': result_postag,
-            'morph': result_morph,
-            'syntax_dep_tree': result_synt,
-        }
+        return doc
 
-    def get_tokens(self, text, form_annotation):
-        """Performs sentence splitting.
+    def _create_word_obj(self, pos, word):
+        ud_tag = word[self.POSTAG]
+        if ud_tag == '_':
+            pos_tag = common.PosTag.UNDEF
+        else:
+            pos_tag = common.POS_TAG_DICT[ud_tag]
 
-        Args:
-            form_annotation(list): list of lists of forms of words.
+        lemma = word[self.LEMMA].lower()
+        if lemma == '_':
+            lemma = ''
+        word_obj = lp_doc.WordObj(lemma=lemma, form=word[self.FORM], pos_tag=pos_tag)
 
-        Returns:
-            List of objects Token.
-        """
+        morph_str = word[self.MORPH]
+        morph_feats = [(s.split('=')) for s in morph_str.split('|') if len(morph_str) > 2]
+        morph_feats = dict(morph_feats)
 
-        ann_tokens = list()
-        prev = 0
-        for sent in form_annotation:
-            for form in sent:
-                begin = text.find(form, prev)
-                end = begin + len(form)
-                ann_tokens.append(Token(text=form, begin=begin, end=end))
-                prev = end
+        # TODO verb moods? other verb forms Fin? Imp?
+        # TODO 'VerbForm' may occur not only for verbs
+        if pos_tag == common.PosTag.VERB:
+            self._adjust_verb(morph_feats, word_obj)
+        elif pos_tag == common.PosTag.ADJ:
+            self._adjust_adj(morph_feats, word_obj)
 
-        return ann_tokens
+        self._assign_morph_features(word_obj, morph_feats)
 
-    def sentence_split(self, form_annotation):
-        """Performs sentence splitting.
+        if word[self.HEAD] != '_':
+            parent_pos = int(word[self.HEAD]) - 1
+            if parent_pos != -1:
+                word_obj.head_offs = parent_pos - pos
+            else:
+                word_obj.head_offs = 0
 
-        Args:
-            form_annotation(list): list of lists of forms of words.
+            # TODO what to do with modificators?
+            # nsubj:pass
+            # acl:relcl
+            # cc:preconj
+            n = common.SYNT_LINK_DICT[word[self.DEPREL].split(':', 1)[0].upper()]
+            word_obj.synt_link = n
 
-        Returns:
-            List of objects Sentence.
-        """
+        return word_obj
 
-        sentences = list()
-        start = 0
-        for sent in form_annotation:
-            sentences.append(Sentence(begin=start, end=start + len(sent)))
-            start += len(sent)
+    def _adjust_verb(self, morph_feats, word_obj: lp_doc.WordObj):
+        if 'VerbForm' in morph_feats:
+            if morph_feats['VerbForm'] == 'Part':
+                if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
+                    word_obj.pos_tag = common.PosTag.PARTICIPLE_SHORT
+                else:
+                    word_obj.pos_tag = common.PosTag.PARTICIPLE
+            elif morph_feats['VerbForm'] in ('Ger', 'Conv'):
+                word_obj.pos_tag = common.PosTag.PARTICIPLE_ADVERB
 
-        return sentences
+    def _adjust_adj(self, morph_feats, word_obj: lp_doc.WordObj):
+        if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
+            word_obj.pos_tag = common.PosTag.ADJ_SHORT
 
-    def _parse_morphology(self, string):
-        result = [(s.split('=')) for s in string.split('|') if len(string) > 2]
-        return {feature[0]: feature[1] for feature in result}
+    def _assign_morph_features(self, word_obj: lp_doc.WordObj, morph_feats):
+        if 'Number' in morph_feats:
+            word_obj.number = common.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
+        if 'Gender' in morph_feats:
+            word_obj.gender = common.WORD_GENDER_DICT[morph_feats['Gender'].upper()]
 
-    def _parse_synt_tree(self, head, deprel):
-        if head == '_':
-            return None
-        return WordSynt(parent=int(head) - 1, link_name=deprel)
+        if 'Case' in morph_feats:
+            word_obj.case = common.WORD_CASE_DICT[morph_feats['Case'].upper()]
+
+        if 'Tense' in morph_feats:
+            word_obj.tense = common.WORD_TENSE_DICT[morph_feats['Tense'].upper()]
+
+        if 'Person' in morph_feats:
+            word_obj.person = common.WORD_PERSON_DICT[morph_feats['Person'].upper()]
+
+        if 'Comparision' in morph_feats:
+            word_obj.comp = common.WORD_COMPARISON_DICT[morph_feats['Comparision'].upper()]
+
+        # TODO skip default
+        if 'Aspect' in morph_feats:
+            word_obj.aspect = common.WORD_ASPECT_DICT[morph_feats['Aspect'].upper()]
+
+        if 'Voice' in morph_feats:
+            word_obj.voice = common.WORD_VOICE_DICT[morph_feats['Voice'].upper()]
+
+        if 'Animacy' in morph_feats:
+            word_obj.animacy = common.WORD_ANIMACY_DICT[morph_feats['Animacy'].upper()]
+        # TODO valency?

@@ -35,6 +35,7 @@ LANG_DICT = _make_dict_for_enum(Lang)
 #SYNTAX
 # UD version 2
 class SyntLink(enum.IntEnum):
+    UNDEF      = -1
     ROOT       = 0
     NSUBJ      = 1
     OBJ        = 2

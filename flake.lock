@@ -24,7 +24,7 @@
       "locked": {
         "lastModified": 1647260247,
         "narHash": "sha256-x1xG8frWloEwZa1B2Oj91TOR6AfC8vv1ai2nnXwhexU=",
-        "ref": "master",
+        "ref": "refs/heads/master",
         "rev": "ab035cc2c45b4d25a06dee8acefcf86ae10ab70b",
         "revCount": 14,
         "type": "git",
@@ -46,11 +46,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1646069918,
-        "narHash": "sha256-SV93dCB749g0UsgrpMaxUq37XHgQVgJTZvtx8MXNlHE=",
+        "lastModified": 1657890893,
+        "narHash": "sha256-Kr+xCKK1APuCcG0G1EyTMnxXxnQ8SfkVCX4djJMl8DQ=",
         "ref": "flakes",
-        "rev": "d98a9f81811ce05696595e7897af820c14960345",
-        "revCount": 108,
+        "rev": "c709bd928f3b99379c616950d44892c14799f8dd",
+        "revCount": 118,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },

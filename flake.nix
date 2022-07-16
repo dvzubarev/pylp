@@ -41,10 +41,11 @@
               textapp-pkgs.packages.x86_64-linux.pyright
               pypkgs.pylint
               pypkgs.black
+              pypkgs.jupyter_server
             ];
 
-            shellHook='' '';
-            dontUseSetuptoolsShellHook = true;
+            # shellHook='' '';
+            # dontUseSetuptoolsShellHook = true;
 
           };
     };
