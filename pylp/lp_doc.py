@@ -13,7 +13,7 @@ class WordObj:
         'offset',
         'len',
         'pos_tag',
-        'head_offs',
+        'parent_offs',
         'synt_link',
         'lang',
         'number',
@@ -27,33 +27,42 @@ class WordObj:
         'animacy',
     )
 
-    def __init__(self, lemma='', form='', pos_tag=common.PosTag.UNDEF) -> None:
+    def __init__(
+        self,
+        *,
+        lemma='',
+        form='',
+        pos_tag=common.PosTag.UNDEF,
+        parent_offs=None,
+        synt_link=None,
+        lang=None,
+    ) -> None:
         # basic info
-        self.lemma = lemma
-        self.form = form
-        self.offset = -1
-        self.len = 0  # len of form
-        self.pos_tag = pos_tag
-        self.head_offs = None
-        self.synt_link = None
+        self.lemma: str = lemma
+        self.form: str = form
+        self.offset: int = -1
+        self.len: int = 0  # len of form
+        self.pos_tag: common.PosTag = pos_tag
+        self.parent_offs: Optional[int] = parent_offs
+        self.synt_link: Optional[common.SyntLink] = synt_link
 
-        self.lang = None
+        self.lang: Optional[common.Lang] = lang
 
         # morph features
-        self.number = None
-        self.gender = None
-        self.case = None
-        self.tense = None
-        self.person = None
-        self.comp = None
-        self.aspect = None
-        self.voice = None
-        self.animacy = None
+        self.number: Optional[common.WordNumber] = None
+        self.gender: Optional[common.WordGender] = None
+        self.case: Optional[common.WordCase] = None
+        self.tense: Optional[common.WordTense] = None
+        self.person: Optional[common.WordPerson] = None
+        self.comp: Optional[common.WordComparison] = None
+        self.aspect: Optional[common.WordAspect] = None
+        self.voice: Optional[common.WordVoice] = None
+        self.animacy: Optional[common.WordAnimacy] = None
 
 
 class Sent:
     def __init__(self) -> None:
-        self._words = []
+        self._words: List[WordObj] = []
 
     def add_word(self, word_obj: WordObj):
         self._words.append(word_obj)
@@ -62,6 +71,9 @@ class Sent:
         for w in self._words:
             yield w
 
+    def set_words(self, new_words: List[WordObj]):
+        self._words = new_words
+
     def __len__(self) -> int:
         return len(self._words)
 
@@ -69,14 +81,14 @@ class Sent:
         yield from self._words
 
     @overload
-    def __getitem__(self, item: slice) -> list[WordObj]:
+    def __getitem__(self, item: slice) -> List[WordObj]:
         ...
 
     @overload
     def __getitem__(self, item: int) -> WordObj:
         ...
 
-    def __getitem__(self, item: slice | int) -> list[WordObj] | WordObj:
+    def __getitem__(self, item: slice | int) -> List[WordObj] | WordObj:
         return self._words[item]
 
 
@@ -84,9 +96,11 @@ FragmentType = List[Tuple[int, int]]
 
 
 class Doc:
-    def __init__(self) -> None:
-        self._sents = []
-        self._lang = None
+    def __init__(self, lang: Optional[str | common.Lang] = None) -> None:
+        self._sents: List[Sent] = []
+        self._lang: Optional[common.Lang] = None
+        if lang is not None:
+            self.lang = lang
         self._fragments: Dict[str, FragmentType] = {}
 
     @property
@@ -120,14 +134,14 @@ class Doc:
         yield from self._sents
 
     @overload
-    def __getitem__(self, item: slice) -> list[Sent]:
+    def __getitem__(self, item: slice) -> List[Sent]:
         ...
 
     @overload
     def __getitem__(self, item: int) -> Sent:
         ...
 
-    def __getitem__(self, item: slice | int) -> list[Sent] | Sent:
+    def __getitem__(self, item: slice | int) -> List[Sent] | Sent:
         return self._sents[item]
 
     def __repr__(self):

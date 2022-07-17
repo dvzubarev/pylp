@@ -69,10 +69,10 @@ class PrepositionCompressor(AbcPostProcessor):
                 wobj.get(Attr.POS_TAG) == PosTag.ADP
                 and wobj.get(Attr.SYNTAX_LINK_NAME) == SyntLink.CASE
             ):
-                head_offs = wobj.get(Attr.SYNTAX_PARENT)
-                if not head_offs:
+                parent_offs = wobj.get(Attr.SYNTAX_PARENT)
+                if not parent_offs:
                     continue
-                head_pos = pos + head_offs
+                parent_pos = pos + parent_offs
                 head_obj = sent[head_pos]
 
                 head_obj[Attr.PREP_MOD] = wobj[Attr.WORD_NUM]

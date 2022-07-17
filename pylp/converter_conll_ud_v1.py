@@ -106,9 +106,9 @@ class ConverterConllUDV1:
         if word[self.HEAD] != '_':
             parent_pos = int(word[self.HEAD]) - 1
             if parent_pos != -1:
-                word_obj.head_offs = parent_pos - pos
+                word_obj.parent_offs = parent_pos - pos
             else:
-                word_obj.head_offs = 0
+                word_obj.parent_offs = 0
 
             # TODO what to do with modificators?
             # nsubj:pass

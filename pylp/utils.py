@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from pylp.common import Attr
+from typing import List
 
 import libpyexbase
+
+from pylp import common
+from pylp import lp_doc
 
 
 def word_id_combiner(words):
@@ -27,7 +30,7 @@ def make_words_dict(doc):
     return flatten_words, d
 
 
-def adjust_syntax_links(new_sent, old_sent, new_positions):
+def adjust_syntax_links(new_sent: List[lp_doc.WordObj], new_positions: List[int]):
     """Example:
     old_sent: ['word', ',', 'word2', ':', 'word3']
     new_sent: ['word', 'word2', 'word3']
@@ -36,14 +39,22 @@ def adjust_syntax_links(new_sent, old_sent, new_positions):
     word links with word2
     word2 links with word3
     """
-    for old_pos, old_word in enumerate(old_sent):
-        if new_positions[old_pos] == -1:
+    # some sanity checks
+    assert len(new_positions) >= len(
+        new_sent
+    ), f"len of new_positions < len of new-sent: {len(new_positions)}>{len(new_sent)}"
+    max_idx_val = max(new_positions)
+    assert max_idx_val < len(
+        new_sent
+    ), f"Max val in new_positions ({max_idx_val}) > len(new_sent) {len(new_sent)}"
+
+    for old_pos, new_pos in enumerate(new_positions):
+        if new_pos == -1:
             # this word does not exist anymore
             continue
-        new_pos = new_positions[old_pos]
 
-        old_parent_offs = new_sent[new_pos].get(Attr.SYNTAX_PARENT)
-        if old_parent_offs is None:
+        old_parent_offs = new_sent[new_pos].parent_offs
+        if old_parent_offs is None or old_parent_offs == 0:
             # this is root or no link
             continue
         old_parent_pos = old_pos + old_parent_offs
@@ -51,10 +62,7 @@ def adjust_syntax_links(new_sent, old_sent, new_positions):
         new_parent_pos = new_positions[old_parent_pos]
         if new_parent_pos == -1:
             # parent does not exist
-            if Attr.SYNTAX_LINK_NAME in new_sent[new_pos]:
-                del new_sent[new_pos][Attr.SYNTAX_LINK_NAME]
-            if Attr.SYNTAX_PARENT in new_sent[new_pos]:
-                del new_sent[new_pos][Attr.SYNTAX_PARENT]
-
+            new_sent[new_pos].parent_offs = 0
+            new_sent[new_pos].synt_link = common.SyntLink.ORPHAN
         else:
-            new_sent[new_pos][Attr.SYNTAX_PARENT] = new_parent_pos - new_pos
+            new_sent[new_pos].parent_offs = new_parent_pos - new_pos

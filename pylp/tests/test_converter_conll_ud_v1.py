@@ -207,22 +207,22 @@ def test_with_synt():
     sent2 = doc_obj[1]
     assert len(sent2) == 18
     word2_1 = sent2[0]
-    assert word2_1.head_offs == 1
+    assert word2_1.parent_offs == 1
     assert word2_1.synt_link == common.SyntLink.NSUBJ
     # 2	пишет	писать	VERB	_	Aspect=Imp|Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	_	_
     word2_2 = sent2[1]
-    assert word2_2.head_offs == 0
+    assert word2_2.parent_offs == 0
     assert word2_2.synt_link == common.SyntLink.ROOT
 
     # 3	письмо	письмо	NOUN	_	Animacy=Inan|Case=Acc|Gender=Neut|Number=Sing	2	obj	_	_
     word2_3 = sent2[2]
-    assert word2_3.head_offs == -1
+    assert word2_3.parent_offs == -1
     assert word2_3.synt_link == common.SyntLink.OBJ
     # 4	брату	брат	NOUN	_	Animacy=Anim|Case=Dat|Gender=Masc|Number=Sing	2	iobj	_	_
     word2_4 = sent2[3]
-    assert word2_4.head_offs == -2
+    assert word2_4.parent_offs == -2
     assert word2_4.synt_link == common.SyntLink.IOBJ
     # 5	карандашом	карандаш	NOUN	_	Animacy=Inan|Case=Ins|Gender=Masc|Number=Sing	2	obl	_	SpaceAfter=No
     word2_5 = sent2[4]
-    assert word2_5.head_offs == -3
+    assert word2_5.parent_offs == -3
     assert word2_5.synt_link == common.SyntLink.OBL

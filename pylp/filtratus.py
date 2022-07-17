@@ -4,19 +4,11 @@
 
 import logging
 
-from pylp.common import Attr
 from pylp.common import PosTag
 from pylp.common import Lang
-from pylp.common import SyntLink
 
+from pylp import lp_doc
 from pylp.utils import adjust_syntax_links
-
-
-class FiltratusContext:
-    def __init__(self, doc):
-        self.word_strings = doc['words']
-        self.word_ids = doc['word_ids']
-        self.doc_lang = doc['lang']
 
 
 class Filtratus:
@@ -27,10 +19,8 @@ class Filtratus:
         for k in kinds:
             self._filters[k] = create_filtratus(k, **filters_kwargs)
 
-    def __call__(self, text, doc_obj, kinds):
-        new_sents = []
-        ctx = FiltratusContext(doc_obj)
-        for sent in doc_obj['sents']:
+    def __call__(self, text: str, doc_obj: lp_doc.Doc, kinds):
+        for sent in doc_obj:
             new_sent = []
             new_positions = []
             cur_pos = 0
@@ -40,7 +30,7 @@ class Filtratus:
                     if k not in self._filters:
                         raise RuntimeError("Filter %s is not loaded!" % k)
 
-                    filtered = self._filters[k].filter(word_obj, word_pos, sent, ctx)
+                    filtered = self._filters[k].filter(word_obj, word_pos, sent)
                     if filtered:
                         break
 
@@ -50,40 +40,32 @@ class Filtratus:
                     new_sent.append(word_obj)
                     new_positions.append(cur_pos)
                     cur_pos += 1
-            if len(new_sent) != len(sent):
-                adjust_syntax_links(new_sent, sent, new_positions)
-            new_sents.append(new_sent)
-        doc_obj['sents'] = new_sents
-        # TODO remove unused words from doc_obj['words']
+
+            if len(new_sent) < len(new_positions):
+                adjust_syntax_links(new_sent, new_positions)
+            sent.set_words(new_sent)
 
 
 class AbcFilter:
     def __init__(self, **kwargs):
         pass
 
-    def filter(self, word_obj, word_pos, sent, ctx):
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
         raise NotImplementedError("ABC")
 
 
 class PunctAndUndefFiltratus(AbcFilter):
     name = 'punct'
 
-    def filter(self, word_obj, word_pos, sent, ctx):
-        if (
-            word_obj.get(Attr.POS_TAG, PosTag.UNDEF) in (PosTag.UNDEF, PosTag.PUNCT, PosTag.X)
-            and word_obj.get(Attr.SYNTAX_LINK_NAME, SyntLink.PUNCT) == SyntLink.PUNCT
-        ):
-            return True
-        return False
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+        return word_obj.pos_tag in (PosTag.UNDEF, PosTag.PUNCT, PosTag.X)
 
 
 class DeterminatusFiltratus(AbcFilter):
     name = 'determiner'
 
-    def filter(self, word_obj, word_pos, sent, ctx):
-        if word_obj[Attr.POS_TAG] == PosTag.DET:
-            return True
-        return False
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+        return word_obj.pos_tag == PosTag.DET
 
 
 class CommonAuxFiltratus(AbcFilter):
@@ -92,13 +74,9 @@ class CommonAuxFiltratus(AbcFilter):
     def __init__(self, **kwargs):
         self._common_aux = frozenset(['be', 'have'])
 
-    def filter(self, word_obj, word_pos, sent, ctx):
-        if (
-            word_obj[Attr.POS_TAG] == PosTag.AUX
-            and ctx.word_strings[word_obj[Attr.WORD_NUM]] in self._common_aux
-        ):
-            return True
-        return False
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+
+        return word_obj.pos_tag == PosTag.AUX and word_obj.lemma in self._common_aux
 
 
 class StopWordsFiltratus(AbcFilter):
@@ -107,8 +85,8 @@ class StopWordsFiltratus(AbcFilter):
     def __init__(self, sw_pos_tags=None, sw_list_path='', sw_white_list_path='', **kwargs):
         def load_words_list(p):
             if p:
-                with open(p, 'r') as f:
-                    return frozenset(int(l.strip(), 16) for l in f)
+                with open(p, 'r', encoding='utf8') as f:
+                    return frozenset(l.strip() for l in f)
             else:
                 return []
 
@@ -136,18 +114,15 @@ class StopWordsFiltratus(AbcFilter):
         else:
             self._sw_pos_tags = frozenset(sw_pos_tags)
 
-    def filter(self, word_obj, word_pos, sent, ctx):
-        if self._white_list and ctx.word_ids[word_obj[Attr.WORD_NUM]] in self._white_list:
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+
+        if self._white_list and word_obj.lemma in self._white_list:
             return False
 
-        # for aot/previous version of textapp compat
-        if word_obj.get(Attr.STOP_WORD_TYPE, 0) > 0:
+        if word_obj.pos_tag in self._sw_pos_tags:
             return True
 
-        if word_obj[Attr.POS_TAG] in self._sw_pos_tags:
-            return True
-
-        if self._stop_words and ctx.word_ids[word_obj[Attr.WORD_NUM]] in self._stop_words:
+        if self._stop_words and word_obj.lemma in self._stop_words:
             return True
 
         return False
@@ -156,22 +131,8 @@ class StopWordsFiltratus(AbcFilter):
 class NumAndUndefLangFiltratus(AbcFilter):
     name = 'num&undeflang'
 
-    def filter(self, word_obj, word_pos, sent, ctx):
-        word_lang = word_obj.get(Attr.LANG, ctx.doc_lang)
-        if word_lang == Lang.UNDEF:
-            return True
-
-        # Do not use aot by now
-        # PosTag.NUM  - имя числительное,   PosTag.NUMBER - число
-        # if word_lang == Lang.RU:
-        #     if word_obj[Attr.POS_TAG] == PosTag.NUMBER:
-        #         return True
-        # else:
-        # but by UD PosTag.NUM is any number? and PosTag.NUMBER is not used
-        if word_obj[Attr.POS_TAG] == PosTag.NUM:
-            return True
-
-        return False
+    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+        return word_obj.lang == Lang.UNDEF or word_obj.pos_tag == PosTag.NUM
 
 
 def create_filtratus(kind='', **kwargs):
