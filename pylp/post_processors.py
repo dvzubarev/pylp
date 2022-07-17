@@ -4,14 +4,14 @@
 
 import logging
 
-import libpyexbase
-
 
 from pylp.filtratus import Filtratus
 from pylp.common import Attr
 from pylp.common import PosTag
 from pylp.common import SyntLink
 from pylp.common import PREP_WHITELIST
+
+from pylp import lp_doc
 
 
 class PostProcessor:
@@ -22,7 +22,7 @@ class PostProcessor:
             self._procs[k] = create_postprocessor(k, **kwargs)
             logging.info("Loading %s postprocessor!", k)
 
-    def __call__(self, kinds, text, doc_obj, **proc_params):
+    def __call__(self, kinds, text: str, doc_obj: lp_doc.Doc, **proc_params):
         for k in kinds:
             if k not in self._procs:
                 raise RuntimeError("PostProcessor %s is not loaded!" % k)
@@ -54,6 +54,11 @@ class PrepositionCompressor(AbcPostProcessor):
         pass
 
     def __call__(self, text, doc_obj):
+        raise RuntimeError("Logic error; this code does not work with new pylp version")
+        # TODO this code works with old version of pylp
+        # PrepositionCompressor is not used in recent versions since we don't filter prepositions
+        # but this idea  may be used later for reducing space by deleting some aux words and
+        # moving their essentials to the head word
         for s in doc_obj['sents']:
             self._proc_sent(s, doc_obj['word_ids'])
 
@@ -81,13 +86,13 @@ class FragmentsMaker(AbcPostProcessor):
     def __init__(self):
         pass
 
-    def _sent_chars_cnt(self, doc_obj, sent):
-        return sum(len(doc_obj['words'][wobj[Attr.WORD_NUM]]) for wobj in sent)
+    def _chars_cnt(self, sent: lp_doc.Sent):
+        return sum(len(wobj.lemma) for wobj in sent)
 
     def __call__(
         self,
-        text,
-        doc_obj,
+        text: str,
+        doc_obj: lp_doc.Doc,
         max_fragment_length=20,
         max_chars_cnt=5_000,
         min_sent_length=4,
@@ -100,9 +105,10 @@ class FragmentsMaker(AbcPostProcessor):
         fragment_begin_no = 0
 
         num = -1
-        for num, sent in enumerate(doc_obj['sents']):
+        for num, sent in enumerate(doc_obj):
             if max_chars_cnt:
-                fragment_chars_cnt += self._sent_chars_cnt(doc_obj, sent)
+                # TODO calculate chars cnt based on text?
+                fragment_chars_cnt += self._chars_cnt(sent)
 
             if len(sent) >= min_sent_length:
                 fragment_size += 1
@@ -125,14 +131,14 @@ class FragmentsMaker(AbcPostProcessor):
                 fragment_size = overlap
                 if max_chars_cnt:
                     fragment_chars_cnt = sum(
-                        self._sent_chars_cnt(doc_obj, s)
-                        for s in doc_obj['sents'][fragment_begin_no : num + 1]
+                        self._chars_cnt(sent) for sent in doc_obj[fragment_begin_no : num + 1]
                     )
 
-        end = len(doc_obj['sents']) - 1
+        end = len(doc_obj) - 1
         cur_end = fragments[-1][1] if fragments else -1
         if num != -1 and fragment_begin_no <= end and cur_end != end:
             fragments.append((fragment_begin_no, end))
 
         logging.debug("created %d fragments", len(fragments))
-        doc_obj['fragments'] = fragments
+
+        doc_obj.set_fragments(fragments)
