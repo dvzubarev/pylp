@@ -44,8 +44,8 @@
               pypkgs.jupyter_server
             ];
 
-            # shellHook='' '';
-            # dontUseSetuptoolsShellHook = true;
+            shellHook='' '';
+            dontUseSetuptoolsShellHook = true;
 
           };
     };

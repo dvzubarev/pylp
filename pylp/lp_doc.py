@@ -36,6 +36,8 @@ class WordObj:
         parent_offs=None,
         synt_link=None,
         lang=None,
+        number=None,
+        gender=None,
     ) -> None:
         # basic info
         self.lemma: str = lemma
@@ -49,8 +51,8 @@ class WordObj:
         self.lang: Optional[common.Lang] = lang
 
         # morph features
-        self.number: Optional[common.WordNumber] = None
-        self.gender: Optional[common.WordGender] = None
+        self.number: Optional[common.WordNumber] = number
+        self.gender: Optional[common.WordGender] = gender
         self.case: Optional[common.WordCase] = None
         self.tense: Optional[common.WordTense] = None
         self.person: Optional[common.WordPerson] = None
@@ -88,7 +90,7 @@ class Sent:
     def __getitem__(self, item: int) -> WordObj:
         ...
 
-    def __getitem__(self, item: slice | int) -> List[WordObj] | WordObj:
+    def __getitem__(self, item: Union[slice, int]) -> Union[List[WordObj], WordObj]:
         return self._words[item]
 
 
@@ -141,7 +143,7 @@ class Doc:
     def __getitem__(self, item: int) -> Sent:
         ...
 
-    def __getitem__(self, item: slice | int) -> List[Sent] | Sent:
+    def __getitem__(self, item: Union[slice, int]) -> Union[List[Sent], Sent]:
         return self._sents[item]
 
     def __repr__(self):

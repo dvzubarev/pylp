@@ -5,7 +5,8 @@ import logging
 
 import pymorphy2
 
-from pylp.common import Attr
+from pylp import common
+from pylp import lp_doc
 from pylp.common import PosTag
 from pylp.common import WordGender
 
@@ -34,13 +35,23 @@ class RuLemmatizer:
         self._opts = opts
         self._morph = pymorphy2.MorphAnalyzer()
         self._fix_tags = frozenset(
-            [PosTag.ADJ, PosTag.NOUN, PosTag.PARTICIPLE, PosTag.ADV, PosTag.VERB]
+            [
+                PosTag.ADJ,
+                PosTag.ADJ_SHORT,
+                PosTag.NOUN,
+                PosTag.ADV,
+                PosTag.PARTICIPLE,
+                PosTag.PARTICIPLE_SHORT,
+                PosTag.VERB,
+            ]
         )
 
         self._pos_tag_mapping = {
             PosTag.ADJ: 'ADJF',
+            PosTag.ADJ_SHORT: 'ADJS',
             PosTag.NOUN: 'NOUN',
             PosTag.PARTICIPLE: 'PRTF',
+            PosTag.PARTICIPLE_SHORT: 'PRTS',
             PosTag.ADV: 'ADVB',
             PosTag.VERB: 'VERB',
         }
@@ -64,54 +75,54 @@ class RuLemmatizer:
                 return res
         return None
 
-    def _fix_feats_impl(self, pymorphy_res, word_obj, stat: Stat):
-        gender = word_obj.get(Attr.GENDER)
+    def _fix_feats_impl(self, pymorphy_res, word_obj: lp_doc.WordObj, stat: Stat):
+        gender = word_obj.gender
 
         if gender is not None and self._gender_mapping[gender] != pymorphy_res.tag.gender:
             g = self._rev_gender_mapping.get(pymorphy_res.tag.gender)
             if g is not None:
                 logging.debug(
                     "fixing gender for %s: %s -> %s",
-                    word_obj[Attr.WORD_FORM],
+                    word_obj.form,
                     self._gender_mapping[gender],
                     pymorphy_res.tag.gender,
                 )
                 stat.fixed_genders += 1
-                word_obj[Attr.GENDER] = g
+                word_obj.gender = g
 
-        number = 'plur' if Attr.PLURAL in word_obj else 'sing'
+        number = 'plur' if word_obj.number == common.WordNumber.PLUR else 'sing'
 
         if pymorphy_res.tag.number and number != pymorphy_res.tag.number:
             stat.fixed_plural += 1
             logging.debug(
                 "fixing plural for %s: %s -> %s",
-                word_obj[Attr.WORD_FORM],
+                word_obj.form,
                 number,
                 pymorphy_res.tag.number,
             )
             if pymorphy_res.tag.number == 'plur':
-                word_obj[Attr.PLURAL] = 1
+                word_obj.number = common.WordNumber.PLUR
             if pymorphy_res.tag.number == 'sing':
-                del word_obj[Attr.PLURAL]
+                word_obj.number = common.WordNumber.SING
 
     def _get_lemma(self, pymorphy_res, pos_tag):
-        if pos_tag == PosTag.PARTICIPLE:
+        if pos_tag in (PosTag.PARTICIPLE, PosTag.PARTICIPLE_SHORT):
             r = pymorphy_res.inflect({'sing', 'masc', 'nomn'})
             if r is not None:
                 return r.word
         return pymorphy_res.normal_form
 
-    def __call__(self, doc_obj):
+    def __call__(self, doc_obj: lp_doc.Doc):
         parsed_cache = {}
 
         stat = Stat()
 
-        for sent in doc_obj['sents']:
+        for sent in doc_obj:
             for word_obj in sent:
-                pos_tag = word_obj.get(Attr.POS_TAG)
-                if pos_tag not in self._fix_tags:
+                # pos_tag = word_obj.get(Attr.POS_TAG)
+                if word_obj.pos_tag not in self._fix_tags:
                     continue
-                word = word_obj[Attr.WORD_FORM]
+                word = word_obj.form
                 if word not in parsed_cache:
                     parsed_cache[word] = self._morph.parse(word)
                 results = parsed_cache[word]
@@ -119,19 +130,19 @@ class RuLemmatizer:
                 # TODO Can you elaborate on this?
                 if all(r.tag.POS == 'INFN' for r in results):
                     continue
-                morphy_tag = self._pos_tag_mapping[pos_tag]
-                current_norm = word_obj.get(Attr.WORD_LEMMA)
+                morphy_tag = self._pos_tag_mapping[word_obj.pos_tag]
+                current_norm = word_obj.lemma
                 pymorphy_res = self._find_matching_res(morphy_tag, results, current_norm)
                 stat.not_found += pymorphy_res is None
 
                 if pymorphy_res is not None:
-                    lemma = self._get_lemma(pymorphy_res, pos_tag)
+                    lemma = self._get_lemma(pymorphy_res, word_obj.pos_tag)
                     if current_norm != lemma:
                         logging.debug(
                             "fixing norm for form %s: %s -> %s", word, current_norm, lemma
                         )
                         stat.fixed_norms += 1
-                        word_obj[Attr.WORD_LEMMA] = lemma
+                        word_obj.lemma = lemma
 
                 if pymorphy_res is not None and self._opts.fix_feats:
                     self._fix_feats_impl(pymorphy_res, word_obj, stat)
