@@ -5,6 +5,7 @@ import pytest
 
 from pylp.post_processors import FragmentsMaker
 from pylp import lp_doc
+from pylp.word_obj import WordObj
 
 
 @pytest.fixture
@@ -116,10 +117,10 @@ def test_no_overlap(fragments_maker):
 
 
 def test_max_chars(fragments_maker):
-    word1 = lp_doc.WordObj(lemma='normal')
-    word2 = lp_doc.WordObj(lemma='sentence')
-    word3 = lp_doc.WordObj(lemma='here')
-    word4 = lp_doc.WordObj(lemma='a' * 100)
+    word1 = WordObj(lemma='normal')
+    word2 = WordObj(lemma='sentence')
+    word3 = WordObj(lemma='here')
+    word4 = WordObj(lemma='a' * 100)
     doc = _make_doc_obj(
         [[word1, word2, word3], [word4], [word4], [word1, word2, word3], [word1, word2, word3]]
     )

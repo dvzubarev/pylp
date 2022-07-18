@@ -1,66 +1,59 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from typing import Any, List
 import collections
 import logging
-from pylp.phrases.builder import PhraseBuilder, PhraseBuilderOpts, Phrase
+
+from pylp.phrases.builder import BasicPhraseBuilder, PhraseBuilder, PhraseBuilderOpts, Phrase
+from pylp.phrases.phrase import Phrase
+
+from pylp import lp_doc
 
 
-def remove_rare_phrases(sent_phrases, min_cnt=1):
+def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
     if min_cnt <= 0:
-        return sent_phrases
+        return
 
     counter = collections.Counter()
-    for sent in sent_phrases:
-        for p in sent:
+    for sent in doc_obj:
+        for p in sent.phrases():
             counter[p.get_id()] += 1
-    new_sents = []
-    for sent in sent_phrases:
-        new_sent = []
-        for p in sent:
+    for sent in doc_obj:
+        new_phrases = []
+        for p in sent.phrases():
             if counter[p.get_id()] >= min_cnt:
-                new_sent.append(p)
-
-        new_sents.append(new_sent)
-
-    return new_sents
+                new_phrases.append(p)
+        sent.set_phrases(new_phrases)
 
 
 def add_phrases_to_doc(
-    doc_obj,
+    doc_obj: lp_doc.Doc,
     MaxN,
-    use_words=False,
     min_cnt=0,
     builder_cls=PhraseBuilder,
     builder_opts=PhraseBuilderOpts(),
 ):
-    builder = builder_cls(MaxN, builder_opts)
-    word_ids = doc_obj.get('word_ids')
-    words = None
-    if use_words:
-        words = doc_obj['words']
-
-    phrases = builder.build_phrases_for_sents(doc_obj['sents'], words, word_ids=word_ids)
+    builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
+    builder.build_phrases_for_doc(doc_obj)
     if min_cnt:
-        phrases = remove_rare_phrases(phrases, min_cnt=min_cnt)
-    doc_obj['sent_phrases'] = phrases
+        remove_rare_phrases(doc_obj, min_cnt=min_cnt)
 
 
 def make_phrases(
-    sent,
-    words,
+    sent: lp_doc.Sent,
     MaxN,
     builder_cls=PhraseBuilder,
     builder_opts=PhraseBuilderOpts(),
 ):
-    builder = builder_cls(MaxN, builder_opts)
-    phrases = builder.build_phrases_for_sent(sent, words)
+    builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
+    phrases = builder.build_phrases_for_sent(sent)
     return phrases
 
 
 def replace_words_with_phrases(
-    sent_words,
-    phrases,
+    sent_words: List[str],
+    phrases: List[Phrase],
     allow_overlapping_phrases=True,
     sort_key=lambda p: -p.size(),
     keep_filler=False,
@@ -76,7 +69,7 @@ def replace_words_with_phrases(
 
     phrases.sort(key=sort_key)
 
-    new_sent = list(range(len(sent_words)))
+    new_sent: List[Any] = list(range(len(sent_words)))
     logging.debug("new sent: %s", new_sent)
     pred = all if allow_overlapping_phrases else any
     for p in phrases:

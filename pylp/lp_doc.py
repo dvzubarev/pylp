@@ -2,69 +2,24 @@
 
 from typing import overload, Optional, Union, Iterator, List, Tuple, Dict
 
+
 from pylp import common
 
-
-class WordObj:
-    __slots__ = (
-        # '_pos',
-        'lemma',
-        'form',
-        'offset',
-        'len',
-        'pos_tag',
-        'parent_offs',
-        'synt_link',
-        'lang',
-        'number',
-        'gender',
-        'case',
-        'tense',
-        'person',
-        'comp',
-        'aspect',
-        'voice',
-        'animacy',
-    )
-
-    def __init__(
-        self,
-        *,
-        lemma='',
-        form='',
-        pos_tag=common.PosTag.UNDEF,
-        parent_offs=None,
-        synt_link=None,
-        lang=None,
-        number=None,
-        gender=None,
-    ) -> None:
-        # basic info
-        self.lemma: str = lemma
-        self.form: str = form
-        self.offset: int = -1
-        self.len: int = 0  # len of form
-        self.pos_tag: common.PosTag = pos_tag
-        self.parent_offs: Optional[int] = parent_offs
-        self.synt_link: Optional[common.SyntLink] = synt_link
-
-        self.lang: Optional[common.Lang] = lang
-
-        # morph features
-        self.number: Optional[common.WordNumber] = number
-        self.gender: Optional[common.WordGender] = gender
-        self.case: Optional[common.WordCase] = None
-        self.tense: Optional[common.WordTense] = None
-        self.person: Optional[common.WordPerson] = None
-        self.comp: Optional[common.WordComparison] = None
-        self.aspect: Optional[common.WordAspect] = None
-        self.voice: Optional[common.WordVoice] = None
-        self.animacy: Optional[common.WordAnimacy] = None
+from pylp.word_obj import WordObj
+from pylp.phrases.phrase import Phrase
 
 
 class Sent:
-    def __init__(self) -> None:
+    def __init__(
+        self, words: Optional[List[WordObj]] = None, phrases: Optional[list[Phrase]] = None
+    ) -> None:
         self._words: List[WordObj] = []
+        if words is not None:
+            self._words = words
+
+        self._phrases: List[Phrase] = []
+        if phrases:
+            self._phrases = phrases
 
     def add_word(self, word_obj: WordObj):
         self._words.append(word_obj)
@@ -75,6 +30,12 @@ class Sent:
 
     def set_words(self, new_words: List[WordObj]):
         self._words = new_words
+
+    def phrases(self) -> Iterator[Phrase]:
+        yield from self._phrases
+
+    def set_phrases(self, phrases):
+        self._phrases = phrases
 
     def __len__(self) -> int:
         return len(self._words)
@@ -98,8 +59,13 @@ FragmentType = List[Tuple[int, int]]
 
 
 class Doc:
-    def __init__(self, lang: Optional[str | common.Lang] = None) -> None:
+    def __init__(
+        self, sents: Optional[List[Sent]] = None, lang: Optional[str | common.Lang] = None
+    ) -> None:
         self._sents: List[Sent] = []
+        if sents is not None:
+            self._sents = sents
+
         self._lang: Optional[common.Lang] = None
         if lang is not None:
             self.lang = lang

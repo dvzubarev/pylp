@@ -4,91 +4,60 @@
 import copy
 import logging
 
+from pylp.phrases.phrase import Phrase
 from pylp.phrases.builder import (
     BasicPhraseBuilder,
     PhraseBuilder,
-    Phrase,
-    Sent,
     make_new_phrase,
     make_2word_phrase,
 )
 
 import pylp.common as lp
+from pylp.word_obj import WordObj
+from pylp import lp_doc
 
 
-class TestPhraseBuilder(BasicPhraseBuilder):
-    def _test_modifier(self, word_obj, pos, sent, mods_index):
-        return lp.Attr.SYNTAX_PARENT in word_obj and word_obj[lp.Attr.SYNTAX_PARENT]
+class _TestPhraseBuilder(BasicPhraseBuilder):
+    def _test_modifier(self, word_obj: WordObj, pos, sent, mods_index):
+        return bool(word_obj.parent_offs)
 
-    def _test_head(self, word_obj, pos, sent, mods_index):
-        return True
+    def _test_head(self, word_obj: WordObj, pos, sent, mods_index):
+        return word_obj.parent_offs is not None
 
 
-def _mkw(num, link, PoS=lp.PosTag.UNDEF, link_kind=-1):
-    word_obj = {lp.Attr.WORD_NUM: num, lp.Attr.SYNTAX_PARENT: link}
-    if PoS != lp.PosTag.UNDEF:
-        word_obj[lp.Attr.POS_TAG] = PoS
-    if link_kind != lp.SyntLink.ROOT:
-        word_obj[lp.Attr.SYNTAX_LINK_NAME] = link_kind
-    return word_obj
+def _mkw(lemma, link, PoS=lp.PosTag.UNDEF, link_kind=None):
+    return WordObj(lemma=lemma, pos_tag=PoS, parent_offs=link, synt_link=link_kind)
 
 
 def _create_sent():
     words = [
-        'известный',  # 0
-        '43',
-        'клинический',
-        'случай',
-        'психоаналитический',
-        'практика',
-        'зигмунд',  # 6
-        'фрейд',
-        'весь',
-        'этот',
-        'работа',  # 10
+        _mkw('известный', 0),  # 0
+        _mkw('43', 0),
+        _mkw('клинический', 1),
+        _mkw('случай', 0),
+        _mkw('психоаналитический', 1),
+        _mkw('практика', 0),
+        _mkw('зигмунд', 1),  # 6
+        _mkw('фрейд', -2),
+        _mkw('весь', 0),
+        _mkw('этот', 0),
+        _mkw('работа', 0),  # 10
     ]
-    sent = [
-        _mkw(0, 0),
-        _mkw(1, 0),
-        _mkw(2, 1),
-        _mkw(3, 0),
-        _mkw(4, 1),
-        _mkw(5, 0),
-        _mkw(6, 1),
-        _mkw(7, -2),
-        _mkw(8, 0),
-        _mkw(9, 0),
-        _mkw(10, 0),
-    ]
-
-    return sent, words
+    return lp_doc.Sent(words)
 
 
 def _create_complex_sent():
-    # fmt: off
     words = [
-        'm1',
-        'm2',
-        'r', #2
-        'm3',
-        'h1', #4
-        'm4',
-        'm5',
-        'h2' #7
+        _mkw('m1', 2),
+        _mkw('m2', 1),
+        _mkw('r', 0),
+        _mkw('m3', 1),
+        _mkw('h1', -2),
+        _mkw('m4', 2),
+        _mkw('m5', 1),
+        _mkw('h2', -3),
     ]
-    # fmt: on
-
-    sent = [
-        _mkw(0, 2),
-        _mkw(1, 1),
-        _mkw(2, 0),
-        _mkw(3, 1),
-        _mkw(4, -2),
-        _mkw(5, 2),
-        _mkw(6, 1),
-        _mkw(7, -3),
-    ]
-    return sent, words
+    return lp_doc.Sent(words)
 
 
 def _p2str(phrase, with_phrases=False):
@@ -96,10 +65,10 @@ def _p2str(phrase, with_phrases=False):
 
 
 def test_phrases_builder():
-    sent, words = _create_sent()
-    phrase_builder = TestPhraseBuilder(MaxN=2)
+    sent = _create_sent()
+    phrase_builder = _TestPhraseBuilder(MaxN=2)
 
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     assert len(phrases) == 4
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
@@ -110,8 +79,8 @@ def test_phrases_builder():
         'психоаналитический_практика',
     ]
 
-    phrase_builder = TestPhraseBuilder(MaxN=3)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrase_builder = _TestPhraseBuilder(MaxN=3)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     # print(str_phrases)
@@ -125,8 +94,8 @@ def test_phrases_builder():
         'психоаналитический_практика_фрейд',
     ]
 
-    phrase_builder = TestPhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrase_builder = _TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     # print(str_phrases)
@@ -143,9 +112,9 @@ def test_phrases_builder():
 
 
 def test_phrases_builder_2():
-    sent, words = _create_complex_sent()
-    phrase_builder = TestPhraseBuilder(MaxN=3)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    sent = _create_complex_sent()
+    phrase_builder = _TestPhraseBuilder(MaxN=3)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     # print(str_phrases)
@@ -170,8 +139,8 @@ def test_phrases_builder_2():
     ]
     assert str_phrases == etal_phrases
 
-    phrase_builder = TestPhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrase_builder = _TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     # print(str_phrases)
@@ -196,11 +165,10 @@ def test_phrases_builder_2():
 
 
 def test_multiple_right_mods():
-    words = ['r', 'm1', 'h1', 'h2']
-    sent = [_mkw(0, 0), _mkw(1, 1), _mkw(2, -2), _mkw(3, -3)]
+    sent = lp_doc.Sent([_mkw('r', 0), _mkw('m1', 1), _mkw('h1', -2), _mkw('h2', -3)])
 
-    phrase_builder = TestPhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrase_builder = _TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     # print (str_phrases)
@@ -210,86 +178,90 @@ def test_multiple_right_mods():
 
 
 def test_phrase_merging1():
-    sent = Sent([_mkw(0, 1), _mkw(1, 0), _mkw(2, 1), _mkw(3, -2)], ['m1', 'r', 'm2', 'h1'])
+    sent = lp_doc.Sent([_mkw('m1', 1), _mkw('r', 0), _mkw('m2', 1), _mkw('h1', -2)])
 
-    root = Phrase(1, sent)
-    mod1 = Phrase(0, sent)
+    root = Phrase(1, sent[1])
+    mod1 = Phrase(0, sent[0])
 
     root = make_new_phrase(root, mod1, sent, set())
-
+    assert root is not None
     assert len(root.get_words()) == 2
     assert root.get_words() == ['m1', 'r']
-    assert root.get_deps() == [1, None]
+    assert root.get_deps() == [1, 0]
 
     root_m1_r = copy.deepcopy(root)
 
-    head1 = Phrase(3, sent)
+    head1 = Phrase(3, sent[3])
     root = make_new_phrase(root, head1, sent, set())
+    assert root is not None
     assert len(root.get_words()) == 3
     assert root.get_words() == ['m1', 'r', 'h1']
-    assert root.get_deps() == [1, None, -1]
+    assert root.get_deps() == [1, 0, -1]
 
     root = copy.deepcopy(root_m1_r)
-    mod2 = Phrase(2, sent)
+    mod2 = Phrase(2, sent[2])
     head1 = make_new_phrase(head1, mod2, sent, set())
+    assert head1 is not None
     root = make_new_phrase(root, head1, sent, set())
+    assert root is not None
     assert len(root.get_words()) == 4
     assert root.get_words() == ['m1', 'r', 'm2', 'h1']
-    assert root.get_deps() == [1, None, 1, -2]
+    assert root.get_deps() == [1, 0, 1, -2]
 
 
 def test_phrase_merging2():
-    sent = Sent([_mkw(0, 0), _mkw(1, 1), _mkw(2, -2), _mkw(3, -3)], ['r', 'm1', 'h1', 'h2'])
+    sent = lp_doc.Sent([_mkw('r', 0), _mkw('m1', 1), _mkw('h1', -2), _mkw('h2', -3)])
 
-    root = Phrase(0, sent)
-    mod1 = Phrase(1, sent)
-    h1 = Phrase(2, sent)
-    h2 = Phrase(3, sent)
+    root = Phrase(0, sent[0])
+    mod1 = Phrase(1, sent[1])
+    h1 = Phrase(2, sent[2])
+    h2 = Phrase(3, sent[3])
     root = make_2word_phrase(root, h2, sent)
     assert root.get_words() == ['r', 'h2']
-    assert root.get_deps() == [None, -1]
+    assert root.get_deps() == [0, -1]
     mod = make_2word_phrase(h1, mod1, sent)
     root = make_new_phrase(root, mod, sent, set())
+    assert root is not None
     assert len(root.get_words()) == 4
     assert root.get_words() == ['r', 'm1', 'h1', 'h2']
-    assert root.get_deps() == [None, 1, -2, -3]
+    assert root.get_deps() == [0, 1, -2, -3]
 
 
 def test_phrase_merging3():
-    sent = Sent([_mkw(0, 2), _mkw(1, 1), _mkw(2, 0)], ['m1', 'm2', 'r'])
-    root = Phrase(2, sent)
-    mod1 = Phrase(0, sent)
-    mod2 = Phrase(1, sent)
+    sent = lp_doc.Sent([_mkw('m1', 2), _mkw('m2', 1), _mkw('r', 0)])
+    root = Phrase(2, sent[2])
+    mod1 = Phrase(0, sent[0])
+    mod2 = Phrase(1, sent[1])
     root = make_2word_phrase(root, mod1, sent)
     assert root.get_head_pos() == 1
     root = make_new_phrase(root, mod2, sent, set())
+    assert root is not None
     assert len(root.get_words()) == 3
     assert root.get_words() == ['m1', 'm2', 'r']
-    assert root.get_deps() == [2, 1, None]
+    assert root.get_deps() == [2, 1, 0]
 
 
-def test_excluding_words():
-    words = ['r', 'm1', 'h1', 'h2']
-    sent = [_mkw(0, 0), _mkw(lp.UNDEF_WORD_NUM, 1), _mkw(2, -2), _mkw(lp.UNDEF_WORD_NUM, -3)]
+def test_undefined_words():
+    sent = lp_doc.Sent([_mkw('r', 0), _mkw(None, None), _mkw('h1', -2), _mkw(None, None)])
 
-    phrase_builder = TestPhraseBuilder(MaxN=5)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrase_builder = _TestPhraseBuilder(MaxN=5)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     assert len(phrases) == 1
     assert str_phrases == ['r_h1']
 
 
 def test_full_phrase_builder():
-    words = ['r', 'm1', 'h1', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
-        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(2, 1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NSUBJ),
+    words = [
+        _mkw('r', 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h1', 1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NSUBJ),
     ]
+    sent = lp_doc.Sent(words)
 
     phrase_builder = PhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p) for p in phrases]
     str_phrases.sort()
     assert len(phrases) == 3
@@ -297,16 +269,16 @@ def test_full_phrase_builder():
 
 
 def test_phrases_with_prepositions():
-    words = ['h1', 'of', 'm1', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, 2, lp.PosTag.ADP, lp.SyntLink.CASE),
-        _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    words = [
+        _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
+    sent = lp_doc.Sent(words)
 
     phrase_builder = PhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [_p2str(p, with_phrases=True) for p in phrases]
     str_phrases.sort()
     assert len(phrases) == 3
@@ -314,85 +286,87 @@ def test_phrases_with_prepositions():
 
 
 def test_phrase_id():
-    words = ['m1', 'm2', 'r']
-    sent = [
-        _mkw(0, 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(2, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    words = [
+        _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('m2', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
     ]
+    sent = lp_doc.Sent(words)
 
     phrase_builder = PhraseBuilder(MaxN=3)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     phrase_id = [p.get_id() for p in phrases if p.size() == 3][0]
     assert phrase_id == 16874608482926624595
 
-    words = ['m2', 'm1', 'r']
-    sent = [
-        _mkw(0, 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(2, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    words = [
+        _mkw('m2', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
     ]
+    sent = lp_doc.Sent(words)
 
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     phrase_id2 = [p.get_id() for p in phrases if p.size() == 3][0]
     assert phrase_id == phrase_id2
 
 
 def test_phrase_id2():
-    words = ['r', 'm1', 'h1', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(2, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    words = [
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h1', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
+    sent = lp_doc.Sent(words)
 
     phrase_builder = PhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     phrase_id = [p.get_id() for p in phrases if p.size() == 4][0]
     assert phrase_id == 536335079326450557
 
-    words = ['r', 'h2', 'm1', 'h1']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-        _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    words = [
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('h2', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h1', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
+    sent = lp_doc.Sent(words)
 
-    phrase_id2 = [p.get_id() for p in phrases if p.size() == 4][0]
+    phrases2 = phrase_builder.build_phrases_for_sent(sent)
+    phrase_id2 = [p.get_id() for p in phrases2 if p.size() == 4][0]
     assert phrase_id == phrase_id2
 
 
 def test_phrase_id_with_prepositions():
-    words = ['h1', 'of', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, 1, lp.PosTag.ADP, lp.SyntLink.CASE),
-        _mkw(2, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    words = [
+        _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('of', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('h2', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
+    sent = lp_doc.Sent(words)
 
     phrase_builder = PhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     assert len(phrases) == 1
     phrase_id = phrases[0].get_id()
     assert phrase_id == 1999309033942072342
 
-    words = ['h1', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    words = [
+        _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('h2', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    sent = lp_doc.Sent(words)
+
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     assert len(phrases) == 1
     phrase_id2 = phrases[0].get_id()
     assert phrase_id != phrase_id2
 
 
 def test_overlap():
-    sent, words = _create_complex_sent()
-    phrase_builder = TestPhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    sent = _create_complex_sent()
+    phrase_builder = _TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     r_h1_m5_h2 = None
     r_h1_m4_h2 = None
     h1_m4_h2 = None
@@ -433,9 +407,9 @@ def test_overlap():
 
 
 def test_contains():
-    sent, words = _create_complex_sent()
-    phrase_builder = TestPhraseBuilder(MaxN=4)
-    phrases = phrase_builder.build_phrases_for_sent(sent, words)
+    sent = _create_complex_sent()
+    phrase_builder = _TestPhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
     r_h1_m5_h2 = None
     r_h1_m4_h2 = None
     h1_m4_h2 = None

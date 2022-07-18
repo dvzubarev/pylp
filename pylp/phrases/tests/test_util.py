@@ -2,70 +2,69 @@
 # coding: utf-8
 
 import copy
+from pylp import lp_doc
 
 from pylp.phrases.builder import Phrase
 from pylp.phrases.util import replace_words_with_phrases, add_phrases_to_doc, make_phrases
 import pylp.common as lp
+from pylp.word_obj import WordObj
 
 
-def _mkw(num, link, PoS=lp.PosTag.UNDEF, link_kind=-1):
-    word_obj = {lp.Attr.WORD_NUM: num, lp.Attr.SYNTAX_PARENT: link}
-    if PoS != lp.PosTag.UNDEF:
-        word_obj[lp.Attr.POS_TAG] = PoS
-    if link_kind != lp.SyntLink.ROOT:
-        word_obj[lp.Attr.SYNTAX_LINK_NAME] = link_kind
-    return word_obj
+def _mkw(lemma, link, PoS=lp.PosTag.UNDEF, link_kind=None):
+    return WordObj(lemma=lemma, pos_tag=PoS, parent_offs=link, synt_link=link_kind)
 
 
 def _create_doc_obj():
-    doc_obj = {
-        'words': ['h1', 'of', 'm1', 'h2', 'm2', 'h3'],
-        'sents': [
+    sents = [
+        lp_doc.Sent(
             [
-                _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-                _mkw(1, 2, lp.PosTag.ADP, lp.SyntLink.CASE),
-                _mkw(2, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-            ],
+                _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+                _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+                _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+            ]
+        ),
+        lp_doc.Sent(
             [
-                _mkw(2, 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                _mkw(4, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-                _mkw(3, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-            ],
+                _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw('m2', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+                _mkw('h2', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+            ]
+        ),
+        lp_doc.Sent(
             [
-                _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-                _mkw(1, 1, lp.PosTag.ADP, lp.SyntLink.CASE),
-                _mkw(5, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-            ],
-        ],
-    }
-    return doc_obj
+                _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+                _mkw('of', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+                _mkw('h3', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+            ]
+        ),
+    ]
+
+    return lp_doc.Doc(sents)
 
 
-def _p2str(phrase, with_phrases=False):
-    return '_'.join(phrase.get_words(with_phrases))
+def _p2str(phrase, with_preps=False):
+    return '_'.join(phrase.get_words(with_preps))
 
 
 def test_add_phrases_to_doc():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, use_words=True, min_cnt=0)
-    sent_phrases = doc_obj['sent_phrases']
+    add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
-    assert len(sent_phrases) == 3
-    sent0 = sent_phrases[0]
-    str_phrases = [_p2str(p, with_phrases=True) for p in sent0]
+    sent0 = doc_obj[0]
+    str_phrases = [_p2str(p, with_preps=True) for p in sent0.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 3
     assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']
 
-    sent1 = sent_phrases[1]
-    str_phrases = [_p2str(p) for p in sent1]
+    sent1 = doc_obj[1]
+    str_phrases = [_p2str(p) for p in sent1.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 3
     assert str_phrases == ['m1_h2', 'm1_m2_h2', 'm2_h2']
 
-    sent2 = sent_phrases[2]
-    str_phrases = [_p2str(p, True) for p in sent2]
+    sent2 = doc_obj[2]
+    str_phrases = [_p2str(p, True) for p in sent2.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['h1_of_h3']
@@ -73,37 +72,38 @@ def test_add_phrases_to_doc():
 
 def test_add_phrases_to_doc_with_min_cnt():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, use_words=True, min_cnt=2)
-    sent_phrases = doc_obj['sent_phrases']
+    add_phrases_to_doc(doc_obj, 4, min_cnt=2)
 
-    assert len(sent_phrases) == 3
-    sent0 = sent_phrases[0]
-    str_phrases = [_p2str(p) for p in sent0]
+    sent0 = doc_obj[0]
+    str_phrases = [_p2str(p) for p in sent0.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['m1_h2']
 
-    sent1 = sent_phrases[1]
-    str_phrases = [_p2str(p) for p in sent1]
+    sent1 = doc_obj[1]
+    str_phrases = [_p2str(p) for p in sent1.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 1
     assert str_phrases == ['m1_h2']
 
-    sent2 = sent_phrases[2]
-    str_phrases = [_p2str(p) for p in sent2]
+    sent2 = doc_obj[2]
+    str_phrases = [_p2str(p) for p in sent2.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 0
 
 
 def test_replace():
+    sent = lp_doc.Sent(
+        [
+            _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+            _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+            _mkw('h1', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+            _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        ]
+    )
     words = ['r', 'm1', 'h1', 'h2']
-    sent = [
-        _mkw(0, 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw(1, 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
-        _mkw(2, -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-        _mkw(3, -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-    ]
-    phrases = make_phrases(sent, words, 3)
+
+    phrases = make_phrases(sent, 3)
     sent_words = copy.copy(words)
     new_sent = replace_words_with_phrases(sent_words, phrases)
     print(phrases)

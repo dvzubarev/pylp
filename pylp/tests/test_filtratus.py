@@ -4,6 +4,7 @@ import pytest
 
 from pylp.filtratus import Filtratus
 from pylp import lp_doc
+from pylp.word_obj import WordObj
 from pylp.common import PosTag, SyntLink, Lang
 
 
@@ -24,10 +25,10 @@ def _make_doc_obj(sents):
 
 
 def test_punct(filtratus):
-    word1 = lp_doc.WordObj(lemma='a', pos_tag=PosTag.NOUN)
-    word2 = lp_doc.WordObj(lemma=',', pos_tag=PosTag.PUNCT)
-    word3 = lp_doc.WordObj(lemma='b', pos_tag=PosTag.NOUN)
-    word4 = lp_doc.WordObj(lemma='.', pos_tag=PosTag.PUNCT)
+    word1 = WordObj(lemma='a', pos_tag=PosTag.NOUN)
+    word2 = WordObj(lemma=',', pos_tag=PosTag.PUNCT)
+    word3 = WordObj(lemma='b', pos_tag=PosTag.NOUN)
+    word4 = WordObj(lemma='.', pos_tag=PosTag.PUNCT)
 
     doc = _make_doc_obj([[word1, word2, word3, word4]])
     filtratus('', doc, ['punct'])
@@ -38,14 +39,10 @@ def test_punct(filtratus):
 
 
 def test_punct_with_synt(filtratus):
-    word1 = lp_doc.WordObj(lemma='a', pos_tag=PosTag.NOUN, parent_offs=0, synt_link=SyntLink.ROOT)
-    word2 = lp_doc.WordObj(
-        lemma=',', pos_tag=PosTag.PUNCT, parent_offs=-1, synt_link=SyntLink.PUNCT
-    )
-    word3 = lp_doc.WordObj(lemma='b', pos_tag=PosTag.NOUN, parent_offs=-2, synt_link=SyntLink.OBJ)
-    word4 = lp_doc.WordObj(
-        lemma='.', pos_tag=PosTag.PUNCT, parent_offs=-1, synt_link=SyntLink.PUNCT
-    )
+    word1 = WordObj(lemma='a', pos_tag=PosTag.NOUN, parent_offs=0, synt_link=SyntLink.ROOT)
+    word2 = WordObj(lemma=',', pos_tag=PosTag.PUNCT, parent_offs=-1, synt_link=SyntLink.PUNCT)
+    word3 = WordObj(lemma='b', pos_tag=PosTag.NOUN, parent_offs=-2, synt_link=SyntLink.OBJ)
+    word4 = WordObj(lemma='.', pos_tag=PosTag.PUNCT, parent_offs=-1, synt_link=SyntLink.PUNCT)
 
     doc = _make_doc_obj([[word1, word2, word3, word4]])
     filtratus('', doc, ['punct'])
@@ -85,28 +82,28 @@ def test_stopwords_with_synt(filtratus):
     doc = _make_doc_obj(
         [
             [
-                lp_doc.WordObj(lemma='H', pos_tag=PosTag.ADP, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='c', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='d', pos_tag=PosTag.NOUN, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='ya', pos_tag=PosTag.PRON, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='hot', pos_tag=PosTag.VERB, parent_offs=0, **kw),
-                lp_doc.WordObj(lemma='bi', pos_tag=PosTag.AUX, parent_offs=-1, **kw),
-                lp_doc.WordObj(lemma='skaz', pos_tag=PosTag.VERB, parent_offs=-2, **kw),
-                lp_doc.WordObj(lemma=',', pos_tag=PosTag.PUNCT, parent_offs=6, **kw),
-                lp_doc.WordObj(lemma='ct', pos_tag=PosTag.SCONJ, parent_offs=5, **kw),
-                lp_doc.WordObj(lemma='na', pos_tag=PosTag.ADP, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='segod', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='den', pos_tag=PosTag.NOUN, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='ya', pos_tag=PosTag.PRON, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='yavl', pos_tag=PosTag.VERB, parent_offs=-7, **kw),
-                lp_doc.WordObj(lemma='odni', pos_tag=PosTag.NUM, parent_offs=-1, **kw),
-                lp_doc.WordObj(lemma='iz', pos_tag=PosTag.ADP, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='lucsh', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='sotr', pos_tag=PosTag.NOUN, parent_offs=-3, **kw),
-                lp_doc.WordObj(lemma='v', pos_tag=PosTag.ADP, parent_offs=2, **kw),
-                lp_doc.WordObj(lemma='nash', pos_tag=PosTag.DET, parent_offs=1, **kw),
-                lp_doc.WordObj(lemma='comp', pos_tag=PosTag.NOUN, parent_offs=-3, **kw),
-                lp_doc.WordObj(lemma='.', pos_tag=PosTag.PUNCT, parent_offs=-17, **kw),
+                WordObj(lemma='H', pos_tag=PosTag.ADP, parent_offs=2, **kw),
+                WordObj(lemma='c', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
+                WordObj(lemma='d', pos_tag=PosTag.NOUN, parent_offs=2, **kw),
+                WordObj(lemma='ya', pos_tag=PosTag.PRON, parent_offs=1, **kw),
+                WordObj(lemma='hot', pos_tag=PosTag.VERB, parent_offs=0, **kw),
+                WordObj(lemma='bi', pos_tag=PosTag.AUX, parent_offs=-1, **kw),
+                WordObj(lemma='skaz', pos_tag=PosTag.VERB, parent_offs=-2, **kw),
+                WordObj(lemma=',', pos_tag=PosTag.PUNCT, parent_offs=6, **kw),
+                WordObj(lemma='ct', pos_tag=PosTag.SCONJ, parent_offs=5, **kw),
+                WordObj(lemma='na', pos_tag=PosTag.ADP, parent_offs=2, **kw),
+                WordObj(lemma='segod', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
+                WordObj(lemma='den', pos_tag=PosTag.NOUN, parent_offs=2, **kw),
+                WordObj(lemma='ya', pos_tag=PosTag.PRON, parent_offs=1, **kw),
+                WordObj(lemma='yavl', pos_tag=PosTag.VERB, parent_offs=-7, **kw),
+                WordObj(lemma='odni', pos_tag=PosTag.NUM, parent_offs=-1, **kw),
+                WordObj(lemma='iz', pos_tag=PosTag.ADP, parent_offs=2, **kw),
+                WordObj(lemma='lucsh', pos_tag=PosTag.ADJ, parent_offs=1, **kw),
+                WordObj(lemma='sotr', pos_tag=PosTag.NOUN, parent_offs=-3, **kw),
+                WordObj(lemma='v', pos_tag=PosTag.ADP, parent_offs=2, **kw),
+                WordObj(lemma='nash', pos_tag=PosTag.DET, parent_offs=1, **kw),
+                WordObj(lemma='comp', pos_tag=PosTag.NOUN, parent_offs=-3, **kw),
+                WordObj(lemma='.', pos_tag=PosTag.PUNCT, parent_offs=-17, **kw),
             ]
         ]
     )

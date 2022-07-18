@@ -6,6 +6,7 @@ import pytest
 from pylp.lemmas.ru_lemmatizer import RuLemmatizer
 from pylp import lp_doc
 from pylp.common import Lang, PosTag, WordGender, WordNumber
+from pylp.word_obj import WordObj
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def _make_doc_obj(sents) -> lp_doc.Doc:
 
 
 def test_ru_lem1(ru_lemmatizer):
-    word1 = lp_doc.WordObj(lemma='прекрасть', form='прекрасна', pos_tag=PosTag.ADJ_SHORT)
+    word1 = WordObj(lemma='прекрасть', form='прекрасна', pos_tag=PosTag.ADJ_SHORT)
 
     doc = _make_doc_obj([[word1]])
 
@@ -34,7 +35,7 @@ def test_ru_lem1(ru_lemmatizer):
 
 
 def test_ru_lem2(ru_lemmatizer):
-    word1 = lp_doc.WordObj(lemma='тратить', form='Потрачено', pos_tag=PosTag.PARTICIPLE_SHORT)
+    word1 = WordObj(lemma='тратить', form='Потрачено', pos_tag=PosTag.PARTICIPLE_SHORT)
 
     doc = _make_doc_obj([[word1]])
 
@@ -44,7 +45,7 @@ def test_ru_lem2(ru_lemmatizer):
 
 
 def test_ru_lem3(ru_lemmatizer):
-    word1 = lp_doc.WordObj(lemma='впустой', form='впустую', pos_tag=PosTag.ADV)
+    word1 = WordObj(lemma='впустой', form='впустую', pos_tag=PosTag.ADV)
 
     doc = _make_doc_obj([[word1]])
 
@@ -54,7 +55,7 @@ def test_ru_lem3(ru_lemmatizer):
 
 
 def test_ru_lem4(ru_lemmatizer):
-    word1 = lp_doc.WordObj(
+    word1 = WordObj(
         lemma='выходная',
         form='выходные',
         pos_tag=PosTag.NOUN,

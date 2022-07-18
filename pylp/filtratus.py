@@ -8,6 +8,7 @@ from pylp.common import PosTag
 from pylp.common import Lang
 
 from pylp import lp_doc
+from pylp.word_obj import WordObj
 from pylp.utils import adjust_syntax_links
 
 
@@ -50,21 +51,21 @@ class AbcFilter:
     def __init__(self, **kwargs):
         pass
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         raise NotImplementedError("ABC")
 
 
 class PunctAndUndefFiltratus(AbcFilter):
     name = 'punct'
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         return word_obj.pos_tag in (PosTag.UNDEF, PosTag.PUNCT, PosTag.X)
 
 
 class DeterminatusFiltratus(AbcFilter):
     name = 'determiner'
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         return word_obj.pos_tag == PosTag.DET
 
 
@@ -74,7 +75,7 @@ class CommonAuxFiltratus(AbcFilter):
     def __init__(self, **kwargs):
         self._common_aux = frozenset(['be', 'have'])
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
 
         return word_obj.pos_tag == PosTag.AUX and word_obj.lemma in self._common_aux
 
@@ -114,7 +115,7 @@ class StopWordsFiltratus(AbcFilter):
         else:
             self._sw_pos_tags = frozenset(sw_pos_tags)
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
 
         if self._white_list and word_obj.lemma in self._white_list:
             return False
@@ -131,7 +132,7 @@ class StopWordsFiltratus(AbcFilter):
 class NumAndUndefLangFiltratus(AbcFilter):
     name = 'num&undeflang'
 
-    def filter(self, word_obj: lp_doc.WordObj, word_pos: int, sent: lp_doc.Sent):
+    def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         return word_obj.lang == Lang.UNDEF or word_obj.pos_tag == PosTag.NUM
 
 

@@ -7,6 +7,7 @@ import pymorphy2
 
 from pylp import common
 from pylp import lp_doc
+from pylp.word_obj import WordObj
 from pylp.common import PosTag
 from pylp.common import WordGender
 
@@ -75,7 +76,7 @@ class RuLemmatizer:
                 return res
         return None
 
-    def _fix_feats_impl(self, pymorphy_res, word_obj: lp_doc.WordObj, stat: Stat):
+    def _fix_feats_impl(self, pymorphy_res, word_obj: WordObj, stat: Stat):
         gender = word_obj.gender
 
         if gender is not None and self._gender_mapping[gender] != pymorphy_res.tag.gender:

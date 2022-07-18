@@ -1,42 +1,56 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import List
+from typing import List, Optional
 
 import pymorphy2
 
-from pylp.common import Attr, Lang, PosTag, WordGender, WordVoice, WordTense, WordCase, SyntLink
-from pylp.phrases.builder import Phrase
+from pylp.common import (
+    Attr,
+    Lang,
+    PosTag,
+    WordGender,
+    WordNumber,
+    WordVoice,
+    WordTense,
+    WordCase,
+    SyntLink,
+)
+from pylp import lp_doc
+from pylp.phrases.phrase import Phrase
+from pylp.word_obj import WordObj
 
 
 # Abstract classes
 class Inflector:
-    def inflect_head(self, phrase: Phrase, sent: List[dict], head_pos):
+    def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         raise NotImplementedError("inflect head is not implemented")
 
-    def inflect_pair(self, phrase: Phrase, sent: List[dict], head_pos, mod_pos):
+    def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
         raise NotImplementedError("inflect pair is not implemented")
 
 
 # API
 
 
-def inflect_phrases(phrases: List[Phrase], sent: List[dict], text_lang):
+def inflect_phrases(phrases: List[Phrase], sent: lp_doc.Sent, text_lang):
     for phrase in phrases:
         inflect_phrase(phrase, sent, text_lang)
 
 
-def inflect_phrase(phrase: Phrase, sent: List[dict], text_lang):
-    if any(sent[i].get(Attr.LANG, text_lang) == Lang.RU for i in phrase.get_sent_pos_list()):
+def inflect_phrase(phrase: Phrase, sent: lp_doc.Sent, text_lang):
+    word_lang = lambda o: text_lang if o.lang is None else o.lang
+    if any(word_lang(sent[i]) == Lang.RU for i in phrase.get_sent_pos_list()):
         return inflect_ru_phrase(phrase, sent)
+
     return inflect_en_phrase(phrase, sent)
 
 
-def inflect_ru_phrase(phrase: Phrase, sent: List[dict]):
+def inflect_ru_phrase(phrase: Phrase, sent: lp_doc.Sent):
     _inflect_mods_of_head(phrase, sent, phrase.get_head_pos(), inflector=_get_ru_inflector())
 
 
-def inflect_en_phrase(phrase: Phrase, sent: List[dict]):
+def inflect_en_phrase(phrase: Phrase, sent: lp_doc.Sent):
     # raise NotImplementedError("en inflecting does not implemented yet!")
     pass
 
@@ -46,7 +60,7 @@ def inflect_en_phrase(phrase: Phrase, sent: List[dict]):
 
 def _inflect_mods_of_head(
     phrase: Phrase,
-    sent: List[dict],
+    sent: lp_doc.Sent,
     head_pos,
     inflector: Inflector,
     inflected=None,
@@ -59,7 +73,7 @@ def _inflect_mods_of_head(
         inflected[head_pos] = True
 
     for mod_pos, l in enumerate(phrase.get_deps()):
-        if not inflected[mod_pos] and l is not None and mod_pos + l == head_pos:
+        if not inflected[mod_pos] and l and mod_pos + l == head_pos:
             # this is modificator
             inflector.inflect_pair(phrase, sent, head_pos, mod_pos)
             inflected[mod_pos] = True
@@ -81,23 +95,23 @@ class RuInflector(Inflector):
     def __init__(self):
         self._pymorphy = pymorphy2.MorphAnalyzer()
 
-    def inflect_head(self, phrase: Phrase, sent: List[dict], head_pos):
+    def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         # We can only change number of a word
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
         head_obj = sent[head_sent_pos]
         phrase_words = phrase.get_words(False)
 
-        if head_obj[Attr.POS_TAG] == PosTag.NOUN:
-            if Attr.PLURAL not in head_obj:
+        if head_obj.pos_tag == PosTag.NOUN:
+            if head_obj.number is None or head_obj.number == WordNumber.SING:
                 return
 
             form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'plur'})
             if form is not None:
                 phrase_words[head_pos] = form
-        elif head_obj[Attr.POS_TAG] == PosTag.PROPN:
+        elif head_obj.pos_tag == PosTag.PROPN:
             phrase_words[head_pos] = phrase_words[head_pos].capitalize()
 
-    def inflect_pair(self, phrase: Phrase, sent: List[dict], head_pos, mod_pos):
+    def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
         head_obj = sent[head_sent_pos]
         mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
@@ -105,20 +119,21 @@ class RuInflector(Inflector):
 
         phrase_words = phrase.get_words(False)
         form = None
-        if head_obj[Attr.POS_TAG] in (PosTag.NOUN, PosTag.PROPN):
+        if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
+
             if (
-                mod_obj[Attr.POS_TAG] in (PosTag.NOUN, PosTag.PROPN)
-                and mod_obj[Attr.SYNTAX_LINK_NAME] == SyntLink.NMOD
+                mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN)
+                and mod_obj.synt_link == SyntLink.NMOD
             ):
-                number = 'plur' if Attr.PLURAL in mod_obj else 'sing'
+                number = 'plur' if mod_obj.number == WordNumber.PLUR else 'sing'
                 form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {number, 'gent'})
-                if form is not None and mod_obj[Attr.POS_TAG] == PosTag.PROPN:
+                if form is not None and mod_obj.pos_tag == PosTag.PROPN:
                     form = form.capitalize()
 
                 extra = phrase.get_extra()
                 extra[mod_pos] = {Attr.CASE: WordCase.GEN}
-            elif mod_obj[Attr.POS_TAG] == PosTag.PROPN:
-                gender = self._gender2pymorphy(head_obj.get(Attr.GENDER))
+            elif mod_obj.pos_tag == PosTag.PROPN:
+                gender = self._gender2pymorphy(head_obj.gender)
                 form = None
                 if gender is not None:
                     form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {gender})
@@ -127,13 +142,13 @@ class RuInflector(Inflector):
                     form = phrase_words[mod_pos]
 
                 form = form.capitalize()
-            elif mod_obj[Attr.POS_TAG] in (PosTag.ADJ, PosTag.PARTICIPLE):
+            elif mod_obj.pos_tag in (PosTag.ADJ, PosTag.PARTICIPLE):
 
                 feats = set()
-                number = 'plur' if Attr.PLURAL in head_obj else 'sing'
+                number = 'plur' if head_obj.number == WordNumber.PLUR else 'sing'
                 feats.add(number)
                 if number != 'plur':
-                    gender = self._gender2pymorphy(head_obj.get(Attr.GENDER))
+                    gender = self._gender2pymorphy(head_obj.gender)
                     if gender is not None:
                         feats.add(gender)
 
@@ -150,9 +165,10 @@ class RuInflector(Inflector):
 
                 feats.add(case)
 
-                if mod_obj[Attr.POS_TAG] == PosTag.ADJ:
+                if mod_obj.pos_tag == PosTag.ADJ:
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'ADJF', feats)
                 else:
+                    print("feats ", feats)
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'PRTF', feats, mod_obj)
 
         if form is not None:
@@ -167,12 +183,12 @@ class RuInflector(Inflector):
             return "neut"
         return None
 
-    def _pymorphy_find_participle(self, inf, mod_obj):
+    def _pymorphy_find_participle(self, inf, mod_obj: Optional[WordObj] = None):
         if mod_obj is None:
             return None
 
-        voice = mod_obj.get(Attr.VOICE, WordVoice.ACT)
-        tense = mod_obj.get(Attr.TENSE)
+        voice = mod_obj.voice
+        tense = mod_obj.tense
         if voice is None or tense is None:
             return None
 
@@ -199,7 +215,7 @@ class RuInflector(Inflector):
                 return l
         return None
 
-    def _pymorphy_inflect(self, word, tag, feats, mod_obj=None):
+    def _pymorphy_inflect(self, word: str, tag: str, feats, mod_obj: Optional[WordObj] = None):
         # ru_inflector = _get_ru_inflector()
         results = self._pymorphy.parse(word)
 

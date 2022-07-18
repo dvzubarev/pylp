@@ -3,6 +3,7 @@ from io import StringIO
 
 from pylp import common
 from pylp import lp_doc
+from pylp.word_obj import WordObj
 
 # inspired by the code from isanlp
 # https://github.com/IINemo/isanlp
@@ -88,7 +89,7 @@ class ConverterConllUDV1:
         lemma = word[self.LEMMA].lower()
         if lemma == '_':
             lemma = ''
-        word_obj = lp_doc.WordObj(lemma=lemma, form=word[self.FORM], pos_tag=pos_tag)
+        word_obj = WordObj(lemma=lemma, form=word[self.FORM], pos_tag=pos_tag)
 
         morph_str = word[self.MORPH]
         morph_feats = [(s.split('=')) for s in morph_str.split('|') if len(morph_str) > 2]
@@ -119,7 +120,7 @@ class ConverterConllUDV1:
 
         return word_obj
 
-    def _adjust_verb(self, morph_feats, word_obj: lp_doc.WordObj):
+    def _adjust_verb(self, morph_feats, word_obj: WordObj):
         if 'VerbForm' in morph_feats:
             if morph_feats['VerbForm'] == 'Part':
                 if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
@@ -129,11 +130,11 @@ class ConverterConllUDV1:
             elif morph_feats['VerbForm'] in ('Ger', 'Conv'):
                 word_obj.pos_tag = common.PosTag.PARTICIPLE_ADVERB
 
-    def _adjust_adj(self, morph_feats, word_obj: lp_doc.WordObj):
+    def _adjust_adj(self, morph_feats, word_obj: WordObj):
         if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
             word_obj.pos_tag = common.PosTag.ADJ_SHORT
 
-    def _assign_morph_features(self, word_obj: lp_doc.WordObj, morph_feats):
+    def _assign_morph_features(self, word_obj: WordObj, morph_feats):
         if 'Number' in morph_feats:
             word_obj.number = common.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
         if 'Gender' in morph_feats:

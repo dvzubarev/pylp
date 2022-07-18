@@ -6,7 +6,7 @@ from typing import List
 import libpyexbase
 
 from pylp import common
-from pylp import lp_doc
+from pylp.word_obj import WordObj
 
 
 def word_id_combiner(words):
@@ -30,7 +30,7 @@ def make_words_dict(doc):
     return flatten_words, d
 
 
-def adjust_syntax_links(new_sent: List[lp_doc.WordObj], new_positions: List[int]):
+def adjust_syntax_links(new_sent: List[WordObj], new_positions: List[int]):
     """Example:
     old_sent: ['word', ',', 'word2', ':', 'word3']
     new_sent: ['word', 'word2', 'word3']

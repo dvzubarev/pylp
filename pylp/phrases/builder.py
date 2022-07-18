@@ -4,233 +4,16 @@
 import math
 import logging
 import copy
-from typing import List, Optional, FrozenSet
+from typing import Iterator, List, Optional, FrozenSet, Tuple
 
-import libpyexbase
 import pylp.common as lp
-from pylp.utils import word_id_combiner
+from pylp import lp_doc
+from pylp.word_obj import WordObj
+
+from pylp.phrases.phrase import Phrase
 
 
-class Sent:
-    def __init__(self, sent_word_obj_list, words=None, word_ids: Optional[List] = None, extra=None):
-        self._sent_word_obj_list = sent_word_obj_list
-        if words is None and word_ids is None:
-            raise RuntimeError("Either words or word_ids should be set!")
-        self._words = words
-        self._word_ids = word_ids
-        if extra is None:
-            self._extra = [None] * len(sent_word_obj_list)
-        else:
-            self._extra = extra
-
-    def __len__(self):
-        return len(self._sent_word_obj_list)
-
-    def __getitem__(self, index):
-        return self._sent_word_obj_list[index]
-
-    def _get_word_obj(self, word_obj_or_pos):
-        if isinstance(word_obj_or_pos, dict):
-            word_obj = word_obj_or_pos
-        elif isinstance(word_obj_or_pos, int):
-            word_obj = self._sent_word_obj_list[word_obj_or_pos]
-        else:
-            raise RuntimeError(f"Unknown argument for word_obj_or_pos {word_obj_or_pos}")
-        return word_obj
-
-    def word(self, word_obj_or_pos):
-        word_obj = self._get_word_obj(word_obj_or_pos)
-
-        if self._words is not None:
-            words = self._words
-        elif self._word_ids is not None:
-            words = self._word_ids
-        else:
-            raise RuntimeError("Logic error")
-        return words[word_obj[lp.Attr.WORD_NUM]]
-
-    def word_id(self, word_obj_or_pos):
-        if self._word_ids is not None:
-            word_obj = self._get_word_obj(word_obj_or_pos)
-            return self._word_ids[word_obj[lp.Attr.WORD_NUM]]
-        return None
-
-    def is_word_undef(self, pos: int):
-        return self._sent_word_obj_list[pos][lp.Attr.WORD_NUM] == lp.UNDEF_WORD_NUM
-
-    def set_extra(self, extra):
-        self._extra = extra
-
-    def word_extra(self, pos):
-        return self._extra[pos]
-
-
-class PhraseId:
-    def __init__(self, pos: int, sent: Sent):
-        word_id = self._word_id(pos, sent)
-
-        self._id = word_id
-        self._root = word_id
-        self._id_parts = [word_id]
-        self._prep_id = None
-
-        extra = sent.word_extra(pos)
-        if extra is not None and lp.Attr.PREP_WHITE_LIST in extra:
-            prep_pos, _ = extra[lp.Attr.PREP_WHITE_LIST]
-            self._prep_id = self._word_id(prep_pos, sent)
-
-    def __copy__(self):
-        cls = self.__class__
-        result = cls.__new__(cls)
-        result.__dict__['_id'] = self._id
-        result.__dict__['_root'] = self._root
-        result.__dict__['_id_parts'] = copy.copy(self._id_parts)
-        result.__dict__['_prep_id'] = self._prep_id
-        return result
-
-    def __str__(self):
-        return self._id
-
-    def _word_id(self, pos: int, sent: Sent):
-        word_id = sent.word_id(pos)
-        if word_id is None:
-            word_str = sent.word(pos)
-            word_id = libpyexbase.detect_lang_calc_word_id(word_str, True)
-        return word_id
-
-    def get_id(self, with_prep=False):
-        if with_prep and self._prep_id:
-            return libpyexbase.combine_word_id(self._prep_id, self._id)
-        return self._id
-
-    def merge_mod(self, mod: "PhraseId", on_left):
-        mod_id = mod.get_id(with_prep=True)
-        if on_left:
-            i = 0
-            while self._id_parts[i] != self._root and mod_id > self._id_parts[i]:
-                i += 1
-        else:
-            i = len(self._id_parts)
-            while self._id_parts[i - 1] != self._root and mod_id < self._id_parts[i - 1]:
-                i -= 1
-        self._id_parts.insert(i, mod_id)
-        self._id = word_id_combiner(self._id_parts)
-        return self
-
-
-class Phrase:
-    def __init__(self, pos: int = None, sent: Sent = None):
-        if pos is not None and sent is not None and not sent.is_word_undef(pos):
-            word_obj = sent[pos]
-            self._head_pos = 0
-            self._sent_pos_list = [pos]
-            self._words = [sent.word(word_obj)]
-
-            self._deps = [None]
-            self._extra = [sent.word_extra(pos)]
-
-            self._id_holder = PhraseId(pos, sent)
-
-    def size(self):
-        return len(self._words)
-
-    def get_head_pos(self):
-        return self._head_pos
-
-    def set_head_pos(self, head_pos):
-        self._head_pos = head_pos
-
-    def sent_hp(self):
-        return self._sent_pos_list[self._head_pos]
-
-    def set_sent_pos_list(self, sent_pos_list):
-        self._sent_pos_list = sent_pos_list
-
-    def get_sent_pos_list(self):
-        return self._sent_pos_list
-
-    def set_extra(self, extra):
-        self._extra = extra
-
-    def get_extra(self):
-        return self._extra
-
-    def set_words(self, words):
-        self._words = words
-
-    def get_words(self, with_preps=True):
-        if not with_preps or not any(e and lp.Attr.PREP_WHITE_LIST in e for e in self._extra):
-            return self._words
-
-        preps = [None] * len(self._words)
-
-        for num, extra in enumerate(self._extra):
-            if extra and lp.Attr.PREP_WHITE_LIST in extra:
-                # this prep should be added after parent
-                # TODO why after?
-                if self._deps[num]:
-                    prep_pos, prep_str = extra[lp.Attr.PREP_WHITE_LIST]
-                    preps[num + self._deps[num]] = prep_str
-        words_with_preps = []
-        for num, w in enumerate(self._words):
-            words_with_preps.append(w)
-            if preps[num]:
-                words_with_preps.append(preps[num])
-
-        return words_with_preps
-
-    def set_deps(self, deps):
-        self._deps = deps
-
-    def get_deps(self):
-        return self._deps
-
-    def set_id_holder(self, pid):
-        self._id_holder = pid
-
-    def get_id_holder(self):
-        return self._id_holder
-
-    def get_id(self):
-        return self._id_holder.get_id()
-
-    def intersects(self, other: "Phrase"):
-        other_pos_list = other.get_sent_pos_list()
-        return not (
-            self._sent_pos_list[-1] < other_pos_list[0]
-            or self._sent_pos_list[0] > other_pos_list[-1]
-        )
-
-    def overlaps(self, other: "Phrase"):
-        other_pos_list = other.get_sent_pos_list()
-        return (
-            self._sent_pos_list[0] <= other_pos_list[0]
-            and self._sent_pos_list[-1] >= other_pos_list[-1]
-        )
-
-    def contains(self, other: "Phrase"):
-        if not self.overlaps(other):
-            return False
-        other_pos_list = other.get_sent_pos_list()
-        i = j = 0
-        while i < len(other_pos_list):
-            if other_pos_list[i] < self._sent_pos_list[j]:
-                return False
-            if other_pos_list[i] == self._sent_pos_list[j]:
-                j += 1
-                i += 1
-            else:
-                j += 1
-        return True
-
-    def __repr__(self) -> str:
-        return f"Phrase(id={self.get_id()}, words= {self.get_words()})"
-
-    def __str__(self):
-        return f"Id:{self.get_id()}, words: {self.get_words()}"
-
-
-def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: Sent):
+def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: lp_doc.Sent):
     head_pos = head_phrase.get_sent_pos_list()[0]
     mod_pos = mod_phrase.get_sent_pos_list()[0]
 
@@ -239,11 +22,11 @@ def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: Sent):
     mod_on_left = mod_pos < head_pos
     p.set_head_pos(1 if mod_on_left else 0)
     p.set_sent_pos_list([mod_pos, head_pos] if mod_on_left else [head_pos, mod_pos])
-    p.set_words([sent.word(p) for p in p.get_sent_pos_list()])
-    p.set_deps([1, None] if mod_on_left else [None, -1])
+    p.set_words([sent[p].lemma for p in p.get_sent_pos_list()])
+    p.set_deps([1, 0] if mod_on_left else [0, -1])
 
-    mod_extra = sent.word_extra(mod_pos)
-    head_extra = sent.word_extra(head_pos)
+    mod_extra = sent[mod_pos].extra
+    head_extra = sent[head_pos].extra
     p.set_extra([mod_extra, head_extra] if mod_pos < head_pos else [head_extra, mod_extra])
 
     p.set_id_holder(
@@ -283,7 +66,7 @@ def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
     return insert_pos
 
 
-def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phrases_cache):
+def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent, phrases_cache):
     new_mod_sz = other_phrase.size()
     old_head_pos = head_pos = head_phrase.get_head_pos()
 
@@ -333,7 +116,7 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phras
         head_pos - insert_pos - other_phrase.get_head_pos()
     )
 
-    words = [sent.word(p) for p in phrase_signature]
+    words = [sent[p].lemma for p in phrase_signature]
     new_phrase = Phrase()
     new_phrase.set_head_pos(head_pos)
     new_phrase.set_words(words)
@@ -354,11 +137,18 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: Sent, phras
     return new_phrase
 
 
-def _generate_new_phrases(head_phrase, mod_phrases, sent: Sent, phrases_cache):
+def _generate_new_phrases(
+    head_phrase: Phrase, mod_phrases: Iterator[Phrase], sent: lp_doc.Sent, phrases_cache
+):
     for mod_phrase in mod_phrases:
         p = make_new_phrase(head_phrase, mod_phrase, sent, phrases_cache)
         if p is not None:
             yield p
+
+
+# types
+PhrasesIndexType = List[Optional[List[List[Phrase]]]]
+ModsIndexType = List[Optional[List[int]]]
 
 
 class BasicPhraseBuilderOpts:
@@ -373,71 +163,89 @@ class BasicPhraseBuilder:
         self._max_n = MaxN
         self._opts = opts
 
-    def _create_all_mods_index(self, sent):
-        mods_index = [None] * len(sent)
+    def _create_all_mods_index(self, sent: lp_doc.Sent) -> ModsIndexType:
+        mods_index: ModsIndexType = [None] * len(sent)
 
         for i, word_obj in enumerate(sent):
-            if word_obj[lp.Attr.WORD_NUM] == lp.UNDEF_WORD_NUM:
-                continue
-
-            l = word_obj.get(lp.Attr.SYNTAX_PARENT, 0)
+            l = word_obj.parent_offs
             if l:
                 head_pos = i + l
-                if mods_index[head_pos] is None:
-                    mods_index[head_pos] = []
-                mods_index[head_pos].append(i)
+
+                mod_list = mods_index[head_pos]
+                if mod_list is None:
+                    mod_list = [i]
+                    mods_index[head_pos] = mod_list
+                else:
+                    mod_list.append(i)
         return mods_index
 
-    def _create_indices(self, sent, all_mods_index):
+    def _create_indices(
+        self, sent: lp_doc.Sent, all_mods_index: ModsIndexType
+    ) -> Tuple[PhrasesIndexType, ModsIndexType]:
         # words_index:
         # for each word there is a list of size MaxN
         # index 0 -> single words
         # index 1 -> two-word phrases
         # index 3 -> three-word phrases etc...
         # mods_index is modificators of words
-        words_index = [None] * len(sent)
-        good_mods_index = [None] * len(sent)
+        words_index: PhrasesIndexType = [None] * len(sent)
+        good_mods_index: ModsIndexType = [None] * len(sent)
 
         for i, word_obj in enumerate(sent):
-            if word_obj[lp.Attr.WORD_NUM] == lp.UNDEF_WORD_NUM:
-                continue
-
             is_good_mod = self._test_pair(word_obj, i, sent, all_mods_index)
             is_good_head = self._test_head(word_obj, i, sent, all_mods_index)
 
             if is_good_head or is_good_mod:
-                words_index[i] = [list() for _ in range(self._max_n)]
+                cur_word_index = [[] for _ in range(self._max_n)]
+                words_index[i] = cur_word_index
                 # init words_index's level 0
-                words_index[i][0] = [Phrase(i, sent)]
+                cur_word_index[0] = [Phrase(i, word_obj)]
 
-            if is_good_mod:
-                head_pos = i + word_obj[lp.Attr.SYNTAX_PARENT]
-                if good_mods_index[head_pos] is None:
-                    good_mods_index[head_pos] = []
-                good_mods_index[head_pos].append(i)
+            if is_good_mod and word_obj.parent_offs:
+                head_pos = i + word_obj.parent_offs
+                mods_list = good_mods_index[head_pos]
+                if mods_list is None:
+                    good_mods_index[head_pos] = [i]
+                else:
+                    mods_list.append(i)
 
         return words_index, good_mods_index
 
-    def _modifiers_generator(self, modificators, words_index, level, ignore_mods):
+    def _modifiers_generator(
+        self,
+        modificators: List[int],
+        words_index: PhrasesIndexType,
+        level: int,
+        ignore_mods: List[int],
+    ):
         for mod_pos in modificators:
             if mod_pos in ignore_mods:
                 continue
-            for mod_phrase in words_index[mod_pos][level]:
+            mod_phrases = words_index[mod_pos]
+            if mod_phrases is None:
+                continue
+            for mod_phrase in mod_phrases[level]:
                 yield mod_phrase
 
-    def _generate_phrases(self, words_index, good_mods_index, sent: Sent):
+    def _generate_phrases(
+        self, words_index: PhrasesIndexType, good_mods_index: ModsIndexType, sent: lp_doc.Sent
+    ):
         phrases_cache = set()
         for l in range(1, self._max_n - 1):
             for head_pos, h in enumerate(words_index):
                 if h is None:
                     continue
-                if not good_mods_index[head_pos]:
+                mods_index = good_mods_index[head_pos]
+                if not mods_index:
                     # no modificators
                     continue
                 # extend the phrases from previous levels with modificators
                 # e.g. we can take already built 2word phrase, add one modificator and get 3word phrase.
                 # or get 2word phrase, add modificator from level 1 that consists of 2 words.
-                for head_level, head_phrases in enumerate(words_index[head_pos]):
+                head_index = words_index[head_pos]
+                if head_index is None:
+                    continue
+                for head_level, head_phrases in enumerate(head_index):
                     mod_level = l - head_level
                     if mod_level < 0:
                         break
@@ -445,7 +253,7 @@ class BasicPhraseBuilder:
                         gen = _generate_new_phrases(
                             head_phrase,
                             self._modifiers_generator(
-                                good_mods_index[head_pos],
+                                mods_index,
                                 words_index,
                                 mod_level,
                                 head_phrase.get_sent_pos_list(),
@@ -454,15 +262,15 @@ class BasicPhraseBuilder:
                             phrases_cache,
                         )
                         for p in gen:
-                            words_index[head_pos][l + 1].append(p)
+                            head_index[l + 1].append(p)
 
-    def _build_phrases_impl(self, sent: Sent):
+    def _build_phrases_impl(self, sent: lp_doc.Sent):
         logging.debug("sent: %s", sent)
 
         all_mods_index = self._create_all_mods_index(sent)
         logging.debug("all_mods_index: %s", all_mods_index)
 
-        sent.set_extra(self._create_extra(sent, all_mods_index))
+        self._create_extra(sent, all_mods_index)
 
         words_index, good_mods_index = self._create_indices(sent, all_mods_index)
         logging.debug("good_mods_index: %s", good_mods_index)
@@ -471,14 +279,16 @@ class BasicPhraseBuilder:
         # create 2word phrases using sligthly optimized function
         level = 0
         for head_pos, good_mods_list in enumerate(good_mods_index):
-            if good_mods_list is None or words_index[head_pos] is None:
+            head_index = words_index[head_pos]
+            if good_mods_list is None or head_index is None:
                 continue
 
             for mod_pos in good_mods_list:
-                p = make_2word_phrase(
-                    words_index[head_pos][level][0], words_index[mod_pos][level][0], sent
-                )
-                words_index[head_pos][level + 1].append(p)
+                mod_index = words_index[mod_pos]
+                if mod_index is None:
+                    continue
+                p = make_2word_phrase(head_index[level][0], mod_index[level][0], sent)
+                head_index[level + 1].append(p)
 
         # fill words_index's levels 2 .. MaxN
         self._generate_phrases(words_index, good_mods_index, sent)
@@ -493,33 +303,42 @@ class BasicPhraseBuilder:
 
         return all_phrases
 
-    def _test_pair(self, mod_word_obj, mod_pos, sent, mods_index):
+    def _test_pair(
+        self,
+        mod_word_obj: WordObj,
+        mod_pos: int,
+        sent: lp_doc.Sent,
+        mods_index: ModsIndexType,
+    ):
+        if not mod_word_obj.parent_offs:
+            return False
+
         if not self._test_modifier(mod_word_obj, mod_pos, sent, mods_index):
             return False
-        head_pos = mod_pos + mod_word_obj[lp.Attr.SYNTAX_PARENT]
+
+        head_pos = mod_pos + mod_word_obj.parent_offs
         return self._test_head(sent[head_pos], head_pos, sent, mods_index)
 
-    def _create_extra(self, sent: Sent, mods_index):
-        return [None] * len(sent)
+    def _create_extra(self, sent: lp_doc.Sent, mods_index: ModsIndexType):
+        pass
 
-    def _test_modifier(self, word_obj: dict, pos: int, sent: Sent, mods_index):
+    def _test_modifier(
+        self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType
+    ):
         raise NotImplementedError("_test_modifier")
 
-    def _test_head(self, word_obj: dict, pos: int, sent: Sent, mods_index):
+    def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         raise NotImplementedError("_test_head")
 
-    def build_phrases_for_sent(self, sent, words=None, word_ids=None):
+    def build_phrases_for_sent(self, sent: lp_doc.Sent):
         if len(sent) > 4096:
             raise RuntimeError("Sent size limit!")
-        sent = Sent(sent, words=words, word_ids=word_ids)
         return self._build_phrases_impl(sent)
 
-    def build_phrases_for_sents(self, sents, words=None, word_ids=None):
-        sent_phrases = []
-        for sent in sents:
-            phrases = self.build_phrases_for_sent(sent, words, word_ids=word_ids)
-            sent_phrases.append(phrases)
-        return sent_phrases
+    def build_phrases_for_doc(self, doc: lp_doc.Doc):
+        for sent in doc:
+            phrases = self.build_phrases_for_sent(sent)
+            sent.set_phrases(phrases)
 
 
 class PhraseBuilderOpts(BasicPhraseBuilderOpts):
@@ -534,8 +353,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
         super().__init__()
 
         self.max_syntax_dist = max_syntax_dist
-        self.good_mod_PoS = good_mod_PoS
-        if self.good_mod_PoS is None:
+        if good_mod_PoS is None:
             self.good_mod_PoS = frozenset(
                 [
                     lp.PosTag.NOUN,
@@ -548,8 +366,9 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                     lp.PosTag.ADJ_SHORT,
                 ]
             )
-        self.good_synt_rels = good_synt_rels
-        if self.good_synt_rels is None:
+        else:
+            self.good_mod_PoS = good_mod_PoS
+        if good_synt_rels is None:
             self.good_synt_rels = frozenset(
                 [
                     lp.SyntLink.AMOD,
@@ -560,13 +379,17 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                     lp.SyntLink.NUMMOD,
                 ]
             )
-        self.whitelisted_preps = whitelisted_preps
-        if self.whitelisted_preps is None:
+        else:
+            self.good_synt_rels = good_synt_rels
+        if whitelisted_preps is None:
             self.whitelisted_preps = lp.PREP_WHITELIST
+        else:
+            self.whitelisted_preps = whitelisted_preps
 
-        self.good_head_PoS = good_head_PoS
-        if self.good_head_PoS is None:
+        if good_head_PoS is None:
             self.good_head_PoS = frozenset([lp.PosTag.NOUN, lp.PosTag.PROPN])
+        else:
+            self.good_head_PoS = good_head_PoS
 
 
 class PhraseBuilder(BasicPhraseBuilder):
@@ -577,7 +400,7 @@ class PhraseBuilder(BasicPhraseBuilder):
     def opts(self) -> PhraseBuilderOpts:
         return self._opts
 
-    def _create_preps_info(self, pos, sent: Sent, mods_index):
+    def _create_preps_info(self, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         preps = []
         whitelisted_preps = []
         modificators = mods_index[pos]
@@ -589,15 +412,13 @@ class PhraseBuilder(BasicPhraseBuilder):
                 continue
             mod_obj = sent[mod_pos]
 
-            if (
-                mod_obj.get(lp.Attr.POS_TAG) == lp.PosTag.ADP
-                and mod_obj.get(lp.Attr.SYNTAX_LINK_NAME) == lp.SyntLink.CASE
-            ):
-                w = sent.word(mod_obj)
+            if mod_obj.pos_tag == lp.PosTag.ADP and mod_obj.synt_link == lp.SyntLink.CASE:
+                w = mod_obj.lemma
+                word_id = mod_obj.word_id
                 if w in self.opts().whitelisted_preps:
-                    whitelisted_preps.append((mod_pos, w))
+                    whitelisted_preps.append((mod_pos, w, word_id))
                 else:
-                    preps.append((mod_pos, w))
+                    preps.append((mod_pos, w, word_id))
 
         extra_dict = {}
         if whitelisted_preps:
@@ -612,48 +433,47 @@ class PhraseBuilder(BasicPhraseBuilder):
 
         return extra_dict
 
-    def _create_extra(self, sent: Sent, mods_index):
-        extras = []
+    def _create_extra(self, sent: lp_doc.Sent, mods_index: ModsIndexType):
         for pos, word_obj in enumerate(sent):
-            extra = {}
-            extra.update(self._create_preps_info(pos, sent, mods_index))
-
+            extra = self._create_preps_info(pos, sent, mods_index)
             if extra:
-                extras.append(extra)
-            else:
-                extras.append(None)
-        return extras
+                word_obj.extra.update(extra)
 
-    def _test_pair(self, mod_word_obj, mod_pos, sent, mods_index):
+    def _test_pair(
+        self,
+        mod_word_obj: WordObj,
+        mod_pos: int,
+        sent: lp_doc.Sent,
+        mods_index: ModsIndexType,
+    ):
         return super()._test_pair(mod_word_obj, mod_pos, sent, mods_index)
 
-    def _test_nmod(self, word_obj: dict, pos: int, sent: Sent, mods_index):
+    def _test_nmod(self, word_obj: WordObj):
         """Return true if this nmod without prepositions or with 'of' prep"""
-        extra = sent.word_extra(pos)
-        if extra is None:
-            return True
+        extra = word_obj.extra
         return lp.Attr.PREP_WHITE_LIST in extra or lp.Attr.PREP_MOD not in extra
 
-    def _test_modifier(self, word_obj: dict, pos: int, sent: Sent, mods_index):
+    def _test_modifier(
+        self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType
+    ):
         """Return True if this is good modifier"""
 
         if (
-            lp.Attr.SYNTAX_PARENT not in word_obj
-            or not word_obj[lp.Attr.SYNTAX_PARENT]
-            or math.fabs(word_obj[lp.Attr.SYNTAX_PARENT]) > self.opts().max_syntax_dist
-            or word_obj.get(lp.Attr.POS_TAG, lp.PosTag.UNDEF) not in self.opts().good_mod_PoS
+            not word_obj.parent_offs
+            or math.fabs(word_obj.parent_offs) > self.opts().max_syntax_dist
+            or word_obj.pos_tag not in self.opts().good_mod_PoS
         ):
             return False
 
-        link = word_obj[lp.Attr.SYNTAX_LINK_NAME]
+        link = word_obj.synt_link
         if link not in self.opts().good_synt_rels:
             return False
 
         if link == lp.SyntLink.NMOD:
-            if not self._test_nmod(word_obj, pos, sent, mods_index):
+            if not self._test_nmod(word_obj):
                 return False
 
         return True
 
-    def _test_head(self, word_obj: dict, pos: int, sent: Sent, mods_index):
-        return word_obj.get(lp.Attr.POS_TAG, lp.PosTag.UNDEF) in self.opts().good_head_PoS
+    def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
+        return word_obj.pos_tag in self.opts().good_head_PoS
