@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import copy
-from typing import List
+from typing import List, Optional
 
 import libpyexbase
 import pylp.common as lp
@@ -10,18 +10,22 @@ from pylp.utils import word_id_combiner
 
 
 class PhraseId:
-    def __init__(self, word_obj: WordObj):
-        word_id = word_obj.word_id
+    def __init__(self, word_obj: Optional[WordObj] = None):
 
-        self._id = word_id
-        self._root = word_id
-        self._id_parts = [word_id]
         self._prep_id = None
-
-        extra = word_obj.extra
-        if lp.Attr.PREP_WHITE_LIST in extra:
-            _, _, prep_id = extra[lp.Attr.PREP_WHITE_LIST]
-            self._prep_id = prep_id
+        if word_obj is not None:
+            word_id = word_obj.word_id
+            self._id = word_id
+            self._root = word_id
+            self._id_parts = [word_id]
+            extra = word_obj.extra
+            if lp.Attr.PREP_WHITE_LIST in extra:
+                _, _, prep_id = extra[lp.Attr.PREP_WHITE_LIST]
+                self._prep_id = prep_id
+        else:
+            self._id = 0
+            self._root = 0
+            self._id_parts = []
 
     def __copy__(self):
         cls = self.__class__
@@ -68,6 +72,13 @@ class Phrase:
             self._extra = [word_obj.extra]
 
             self._id_holder = PhraseId(word_obj)
+        else:
+            self._head_pos = 0
+            self._sent_pos_list = []
+            self._words = []
+            self._deps = []
+            self._extra = []
+            self._id_holder = PhraseId()
 
     def size(self):
         return len(self._words)

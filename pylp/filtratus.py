@@ -6,10 +6,10 @@ import logging
 
 from pylp.common import PosTag
 from pylp.common import Lang
+from pylp.common import STOP_WORD_POS_TAGS
 
 from pylp import lp_doc
 from pylp.word_obj import WordObj
-from pylp.utils import adjust_syntax_links
 
 
 class Filtratus:
@@ -21,30 +21,14 @@ class Filtratus:
             self._filters[k] = create_filtratus(k, **filters_kwargs)
 
     def __call__(self, text: str, doc_obj: lp_doc.Doc, kinds):
+        filters = []
+        for k in kinds:
+            if k not in self._filters:
+                raise RuntimeError("Filter %s is not loaded!" % k)
+            filters.append(self._filters[k])
+
         for sent in doc_obj:
-            new_sent = []
-            new_positions = []
-            cur_pos = 0
-            for word_pos, word_obj in enumerate(sent):
-                filtered = False
-                for k in kinds:
-                    if k not in self._filters:
-                        raise RuntimeError("Filter %s is not loaded!" % k)
-
-                    filtered = self._filters[k].filter(word_obj, word_pos, sent)
-                    if filtered:
-                        break
-
-                if filtered:
-                    new_positions.append(-1)
-                else:
-                    new_sent.append(word_obj)
-                    new_positions.append(cur_pos)
-                    cur_pos += 1
-
-            if len(new_sent) < len(new_positions):
-                adjust_syntax_links(new_sent, new_positions)
-            sent.set_words(new_sent)
+            sent.filter_words(filters)
 
 
 class AbcFilter:
@@ -53,6 +37,9 @@ class AbcFilter:
 
     def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         raise NotImplementedError("ABC")
+
+    def __call__(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent) -> bool:
+        return self.filter(word_obj, word_pos, sent)
 
 
 class PunctAndUndefFiltratus(AbcFilter):
@@ -99,19 +86,7 @@ class StopWordsFiltratus(AbcFilter):
         logging.info("Loaded %d words from white list", len(self._white_list))
 
         if sw_pos_tags is None:
-            self._sw_pos_tags = frozenset(
-                [
-                    PosTag.ADP,
-                    PosTag.CONJ,
-                    PosTag.PART,
-                    PosTag.PRON,
-                    PosTag.AUX,
-                    PosTag.SCONJ,
-                    PosTag.CCONJ,
-                    PosTag.SYM,
-                    PosTag.X,
-                ]
-            )
+            self._sw_pos_tags = frozenset(STOP_WORD_POS_TAGS)
         else:
             self._sw_pos_tags = frozenset(sw_pos_tags)
 
