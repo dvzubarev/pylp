@@ -40,7 +40,7 @@ def _create_doc_obj():
         ),
     ]
 
-    return lp_doc.Doc(sents)
+    return lp_doc.Doc('id', sents=sents)
 
 
 def _p2str(phrase, with_preps=False):

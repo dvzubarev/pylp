@@ -14,7 +14,7 @@ def fragments_maker():
 
 
 def _make_doc_obj(sents):
-    doc = lp_doc.Doc()
+    doc = lp_doc.Doc('id')
     for s in sents:
         doc.add_sent(s)
     return doc

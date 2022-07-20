@@ -15,7 +15,7 @@ def filtratus():
 
 
 def _make_doc_obj(sents):
-    doc = lp_doc.Doc(lang=Lang.EN)
+    doc = lp_doc.Doc('id', lang=Lang.EN)
     for s in sents:
         sent = lp_doc.Sent()
         for w in s:

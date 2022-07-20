@@ -13,8 +13,14 @@ class PhraseId:
     def __init__(self, word_obj: Optional[WordObj] = None):
 
         self._prep_id = None
+        self._id: int = 0
+        self._root = None
+        self._id_parts = []
+
         if word_obj is not None:
             word_id = word_obj.word_id
+            if word_id is None:
+                raise RuntimeError(f"Unable to calculate word id for a word: {word_obj}")
             self._id = word_id
             self._root = word_id
             self._id_parts = [word_id]
@@ -22,10 +28,6 @@ class PhraseId:
             if lp.Attr.PREP_WHITE_LIST in extra:
                 _, _, prep_id = extra[lp.Attr.PREP_WHITE_LIST]
                 self._prep_id = prep_id
-        else:
-            self._id = 0
-            self._root = 0
-            self._id_parts = []
 
     def __copy__(self):
         cls = self.__class__
@@ -36,15 +38,14 @@ class PhraseId:
         result.__dict__['_prep_id'] = self._prep_id
         return result
 
-    def __str__(self):
-        return self._id
-
     def get_id(self, with_prep=False):
         if with_prep and self._prep_id:
             return libpyexbase.combine_word_id(self._prep_id, self._id)
         return self._id
 
     def merge_mod(self, mod: "PhraseId", on_left):
+        if self._root is None:
+            raise RuntimeError("Can't merge root is not initialized!")
         mod_id = mod.get_id(with_prep=True)
         if on_left:
             i = 0
@@ -57,6 +58,19 @@ class PhraseId:
         self._id_parts.insert(i, mod_id)
         self._id = word_id_combiner(self._id_parts)
         return self
+
+    def to_dict(self):
+        return {'prep_id': self._prep_id, 'id': self._id}
+
+    @classmethod
+    def from_dict(cls, dic):
+        phrase_id = cls()
+        phrase_id._prep_id = dic['prep_id']
+        phrase_id._id = dic['id']
+        return phrase_id
+
+    def __str__(self):
+        return self._id
 
 
 class Phrase:
@@ -172,8 +186,31 @@ class Phrase:
                 j += 1
         return True
 
+    def to_dict(self):
+        return {
+            'head_pos': self._head_pos,
+            'sent_pos_lis': self._sent_pos_list,
+            'words': self._words,
+            'deps': self._deps,
+            'extra': self._extra,
+            'id_holder': self._id_holder.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, dic):
+        phrase = cls()
+        phrase._head_pos = dic['head_pos']
+        phrase._sent_pos_list = dic['sent_pos_list']
+        phrase._words = dic['words']
+        phrase._deps = dic['deps']
+        phrase._extra = dic['extra']
+        phrase._id_holder = PhraseId.from_dict(dic['id_holder'])
+        return phrase
+
     def __repr__(self) -> str:
         return f"Phrase(id={self.get_id()}, words= {self.get_words()})"
 
     def __str__(self):
-        return f"Id:{self.get_id()}, words: {self.get_words()}"
+        return (
+            f"Id:{self.get_id()}, words: {self.get_words()}, positions: {self.get_sent_pos_list()}"
+        )

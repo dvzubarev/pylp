@@ -4,19 +4,19 @@
 import enum
 
 
-def _enum2str(enum_val):
+def enum2str(enum_val):
     s = str(enum_val)
     return s[s.index('.') + 1 :]
 
 
 def _make_dict_for_enum(enum_cls, translator=None):
     if translator is None:
-        return {_enum2str(v): v for v in enum_cls}
-    return {translator[_enum2str(v)]: v for v in enum_cls}
+        return {enum2str(v): v for v in enum_cls}
+    return {translator[enum2str(v)]: v for v in enum_cls}
 
 
 def _make_list_for_enum(enum_cls):
-    return [_enum2str(v) for v in enum_cls]
+    return [enum2str(v) for v in enum_cls]
 
 
 # CONVERTER TABLES
@@ -189,8 +189,9 @@ UNDEF_WORD_NUM = -1
 #ATTRIBUTES
 class Attr:
     WORD_NUM         = 'i'
-    WORD_FORM        = 'form' #not for storing in textdb
+    WORD_FORM        = 'form'
     WORD_LEMMA       = 'lemma'
+    WORD_ID          = 'id'
     IS_QUESTION      = 'Q'
     LANG             = 'L'
     HOMONYM          = 'H'
@@ -198,7 +199,7 @@ class Attr:
     SYNTAX_PARENT    = 'l'
     SYNTAX_LINK_NAME = 'n'
     POS_TAG          = 'p'
-    PLURAL           = 'P'
+    NUMBER           = 'P'
     GENDER           = 'g'
     CASE             = 'c'
     TENSE            = 'v'

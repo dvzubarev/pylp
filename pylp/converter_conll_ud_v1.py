@@ -35,7 +35,7 @@ class ConverterConllUDV1:
     HEAD = 6
     DEPREL = 7
 
-    def __call__(self, text, conll_raw_text) -> lp_doc.Doc:
+    def __call__(self, text, conll_raw_text, doc: lp_doc.Doc) -> lp_doc.Doc:
         """Performs conll text parsing.
 
         Args:
@@ -44,8 +44,6 @@ class ConverterConllUDV1:
         Returns:
         lp_doc.Doc
         """
-        doc = lp_doc.Doc()
-
         cur_text_pos = 0
         try:
             for conllu_sent in ConllFormatStreamParser(conll_raw_text):
@@ -64,6 +62,7 @@ class ConverterConllUDV1:
                             f"Failed to find form {word_obj.form} in text: {text[cur_text_pos: 50]}"
                         )
                     word_obj.offset = begin
+                    assert word_obj.form is not None, "not initialized form"
                     word_obj.len = len(word_obj.form)
                     cur_text_pos = begin + word_obj.len
 

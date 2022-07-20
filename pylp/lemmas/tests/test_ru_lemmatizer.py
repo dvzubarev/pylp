@@ -15,7 +15,7 @@ def ru_lemmatizer():
 
 
 def _make_doc_obj(sents) -> lp_doc.Doc:
-    doc = lp_doc.Doc(lang=Lang.RU)
+    doc = lp_doc.Doc('id', lang=Lang.RU)
     for s in sents:
         sent = lp_doc.Sent()
         for w in s:

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
+import hashlib
 import logging
-from typing import overload, Optional, Union, Iterator, List, Tuple, Dict
+from typing import Any, overload, Optional, Iterator, List, Tuple, Dict
 
 
 from pylp import common
@@ -13,7 +14,10 @@ from pylp.utils import adjust_syntax_links
 
 class Sent:
     def __init__(
-        self, words: Optional[List[WordObj]] = None, phrases: Optional[list[Phrase]] = None
+        self,
+        words: List[WordObj] = None,
+        phrases: List[Phrase] = None,
+        bounds: Tuple[int, int] = None,
     ) -> None:
         self._words: List[WordObj] = []
         if words is not None:
@@ -22,6 +26,10 @@ class Sent:
         self._phrases: List[Phrase] = []
         if phrases:
             self._phrases = phrases
+
+        self.bounds: Optional[Tuple[int, int]] = None
+        if bounds:
+            self.bounds = bounds
 
     def add_word(self, word_obj: WordObj):
         self._words.append(word_obj)
@@ -94,8 +102,57 @@ class Sent:
     def __getitem__(self, item: int) -> WordObj:
         ...
 
-    def __getitem__(self, item: Union[slice, int]) -> Union[List[WordObj], WordObj]:
+    def __getitem__(self, item: slice | int) -> List[WordObj] | WordObj:
         return self._words[item]
+
+    def to_dict(self):
+        words = []
+        d: Dict[str, Any] = {'words': words}
+        for w in self._words:
+            words.append(w.to_dict())
+
+        if self.bounds is not None:
+            d['bounds'] = self.bounds
+
+        if self._phrases:
+            phrases = []
+            d['phrases'] = phrases
+            for p in self._phrases:
+                phrases.append(p.to_dict())
+
+        return d
+
+    @classmethod
+    def from_dict(cls, dic):
+        words = []
+        for wdic in dic['words']:
+            words.append(WordObj.from_dict(wdic))
+        phrases = []
+        if 'phrases' in dic:
+            for pdic in dic['phrases']:
+                phrases.append(Phrase.from_dict(pdic))
+
+        bounds = dic.get('bounds')
+        return cls(words, phrases, bounds)
+
+    def __str__(self) -> str:
+        s = ''
+        if self.bounds:
+            s = f"Offset: {self.bounds[0]}, len: {self.bounds[1]}, "
+
+        s += 'Words:\n'
+        words_s = []
+        for i, w in enumerate(self._words):
+            words_s.append(f"Word #{i}: {w}\n")
+
+        phrases_s = []
+        if self._phrases:
+            phrases_s.append('Phrases:\n')
+            for p in self._phrases:
+                phrases_s.append(str(p))
+                phrases_s.append('\n')
+
+        return ''.join([s] + words_s + phrases_s)
 
 
 FragmentType = List[Tuple[int, int]]
@@ -103,8 +160,20 @@ FragmentType = List[Tuple[int, int]]
 
 class Doc:
     def __init__(
-        self, sents: Optional[List[Sent]] = None, lang: Optional[str | common.Lang] = None
+        self,
+        doc_id: str,
+        text: str = None,
+        sents: Optional[List[Sent]] = None,
+        lang: Optional[str | common.Lang] = None,
     ) -> None:
+
+        self.doc_id = doc_id
+
+        self._text = None
+        self._text_hash = None
+        if text is not None:
+            self.text = text
+
         self._sents: List[Sent] = []
         if sents is not None:
             self._sents = sents
@@ -114,12 +183,25 @@ class Doc:
             self.lang = lang
         self._fragments: Dict[str, FragmentType] = {}
 
+        self._ling_meta = {'model': {}, 'properties': [], 'post_processors': {'kinds': []}}
+
+    @property
+    def text(self) -> Optional[str]:
+        return self._text
+
+    @text.setter
+    def text(self, text):
+        self._text = text
+        m = hashlib.sha1()
+        m.update(text.encode('utf8'))
+        self._text_hash = m.hexdigest()
+
     @property
     def lang(self) -> Optional[common.Lang]:
         return self._lang
 
     @lang.setter
-    def lang(self, lang: Union[common.Lang, str]):
+    def lang(self, lang: common.Lang | str):
         if isinstance(lang, str):
             self._lang = common.LANG_DICT.get(lang.upper(), common.Lang.UNDEF)
         else:
@@ -138,6 +220,15 @@ class Doc:
         for s in self._sents:
             yield s
 
+    def update_ling_model_info(self, **kwargs):
+        self._ling_meta['model'].update(kwargs)
+
+    def update_post_processors_info(self, **kwargs):
+        self._ling_meta['post_processors'].update(kwargs)
+
+    def add_ling_prop(self, val):
+        self._ling_meta['properties'].append(val)
+
     def __len__(self) -> int:
         return len(self._sents)
 
@@ -152,8 +243,79 @@ class Doc:
     def __getitem__(self, item: int) -> Sent:
         ...
 
-    def __getitem__(self, item: Union[slice, int]) -> Union[List[Sent], Sent]:
+    def __getitem__(self, item: slice | int) -> List[Sent] | Sent:
         return self._sents[item]
 
     def __repr__(self):
-        return f"<Doc: {len(self._sents)} sents>"
+        s = f"<Doc: {self.doc_id}; "
+        if self.text is not None:
+            text_s = f"text len: {len(self.text)}, text hash: {self._text_hash}; "
+        else:
+            text_s = ''
+        if self._sents:
+            sents_s = f"sents: {len(self._sents)}; "
+        else:
+            sents_s = ''
+
+        return ''.join([s, text_s, sents_s, '>'])
+
+    def to_dict(self):
+        d = {'id': self.doc_id, 'ling_meta': self._ling_meta}
+        if self._fragments:
+            d['fragments'] = self._fragments
+
+        if self._text is not None:
+            d['text'] = self._text
+            d['text_hash'] = self._text_hash
+
+        if self._lang is not None:
+            d['lang'] = self._lang
+
+        sents = []
+        d['sents'] = sents
+        for sent in self._sents:
+            sents.append(sent.to_dict())
+        return d
+
+    @classmethod
+    def from_dict(cls, dic):
+        doc = cls(dic['id'], lang=dic.get('lang'))
+        text = None
+        text_hash = None
+        if 'text' in dic:
+            text = dic['text']
+            text_hash = dic['text_hash']
+        doc._text = text
+        doc._text_hash = text_hash
+        if 'fragments' in dic:
+            doc._fragments = dic['fragments']
+        if 'ling_meta' in dic:
+            doc._ling_meta = dic['ling_meta']
+
+        for sdic in dic['sents']:
+            doc.add_sent(Sent.from_dict(sdic))
+        return doc
+
+    def __str__(self) -> str:
+        s = f"Doc: {self.doc_id}; "
+        if self.lang is not None:
+            s += f"lang: {self.lang}; "
+
+        if self.text is not None:
+            text_s = f"text len: {len(self.text)}, text hash: {self._text_hash}; "
+        else:
+            text_s = ''
+
+        sents_s = []
+        if self._sents:
+            sents_s = [f"sents: {len(self._sents)}\n"]
+            for i, sent in enumerate(self._sents):
+                sents_s.append(f"Sent #{i}: {sent}")
+
+        fragments_s = []
+        if self._fragments:
+            fragments_s = ["Fragments:\n"]
+            for name, frag in self._fragments.items():
+                fragments_s.append(f"{name}: {frag}\n")
+
+        return ''.join([s, text_s] + sents_s + fragments_s + ['\n', str(self._ling_meta)])

@@ -9,7 +9,7 @@ from pylp import common
 from pylp.word_obj import WordObj
 
 
-def word_id_combiner(words):
+def word_id_combiner(words) -> int:
     w = words[0]
     for i in range(1, len(words)):
         w = libpyexbase.combine_word_id(w, words[i])

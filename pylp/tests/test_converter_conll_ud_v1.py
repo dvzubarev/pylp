@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pylp.converter_conll_ud_v1 import ConverterConllUDV1
-from pylp import common
+from pylp import common, lp_doc
 
 TEXT_1 = """ Тестовый "текст".
 
@@ -116,7 +116,8 @@ CONLLU_TEXT_WITH_SYNT = """# sent_id = 4
 
 def test_only_tokens():
     converter = ConverterConllUDV1()
-    doc_obj = converter(TEXT_1, CONLLU_TEXT_ONLY_TOKENS)
+    doc_obj = lp_doc.Doc('1')
+    converter(TEXT_1, CONLLU_TEXT_ONLY_TOKENS, doc_obj)
     assert len(doc_obj) == 2
     sent1 = doc_obj[0]
     assert len(sent1) == 5
@@ -142,7 +143,8 @@ def test_only_tokens():
 
 def test_with_tags():
     converter = ConverterConllUDV1()
-    doc_obj = converter(TEXT_2, CONLLU_TEXT_WITH_TAGS)
+    doc_obj = lp_doc.Doc('2')
+    converter(TEXT_2, CONLLU_TEXT_WITH_TAGS, doc_obj)
     assert len(doc_obj) == 3
 
     sent1 = doc_obj[0]
@@ -191,7 +193,8 @@ def test_with_tags():
 
 def test_lemmas_lower_case():
     converter = ConverterConllUDV1()
-    doc_obj = converter(TEXT_2, CONLLU_TEXT_WITH_TAGS)
+    doc_obj = lp_doc.Doc('3')
+    converter(TEXT_2, CONLLU_TEXT_WITH_TAGS, doc_obj)
     assert len(doc_obj) == 3
     sent3 = doc_obj[2]
     word3_1 = sent3[0]
@@ -201,7 +204,8 @@ def test_lemmas_lower_case():
 
 def test_with_synt():
     converter = ConverterConllUDV1()
-    doc_obj = converter(TEXT_3, CONLLU_TEXT_WITH_SYNT)
+    doc_obj = lp_doc.Doc('4')
+    converter(TEXT_3, CONLLU_TEXT_WITH_SYNT, doc_obj)
     assert len(doc_obj) == 2
 
     sent2 = doc_obj[1]
