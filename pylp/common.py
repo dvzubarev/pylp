@@ -35,7 +35,6 @@ LANG_DICT = _make_dict_for_enum(Lang)
 #SYNTAX
 # UD version 2
 class SyntLink(enum.IntEnum):
-    UNDEF      = -1
     ROOT       = 0
     NSUBJ      = 1
     OBJ        = 2
@@ -45,28 +44,28 @@ class SyntLink(enum.IntEnum):
     NMOD       = 6
     CASE       = 7
     ACL        = 8
-    ADVCL      = 9
+    CC         = 9
     APPOS      = 10
-    AUX        = 11
-    CC         = 12
-    CCOMP      = 13
-    CLF        = 14
-    COMPOUND   = 15
-    CONJ       = 16
-    COP        = 17
-    CSUBJ      = 18
-    DEP        = 19
-    DET        = 20
-    DISCOURSE  = 21
-    DISLOCATED = 22
-    EXPL       = 23
-    FIXED      = 24
-    FLAT       = 25
-    GOESWITH   = 26
-    IOBJ       = 27
-    LIST       = 28
-    MARK       = 29
-    NUMMOD     = 30
+    COMPOUND   = 11
+    CONJ       = 12
+    DEP        = 13
+    MARK       = 14
+    NUMMOD     = 15
+    AUX        = 16
+    FLAT       = 17
+    CCOMP      = 18
+    CLF        = 19
+    COP        = 20
+    CSUBJ      = 21
+    ADVCL      = 22
+    DET        = 23
+    DISCOURSE  = 24
+    DISLOCATED = 25
+    EXPL       = 26
+    FIXED      = 27
+    GOESWITH   = 28
+    IOBJ       = 29
+    LIST       = 30
     ORPHAN     = 31
     PARATAXIS  = 32
     PUNCT      = 33
@@ -78,34 +77,31 @@ SYNT_LINK_DICT = _make_dict_for_enum(SyntLink)
 
 #MORPH
 class PosTag(enum.IntEnum):
-    UNDEF             = 0
+    PROPN             = 0
     VERB              = 1
     NOUN              = 2
     ADJ               = 3
     PRON              = 4
     NUM               = 5
-    PROPN             = 6
-    PARENTHESIS       = 7 #compatibility with aot
-    INTJ              = 8
-    PREDICATE         = 9 #compatibility with aot
+    PARTICIPLE        = 6 #полное причастие
+    PARTICIPLE_SHORT  = 7 #краткое причастие
+    PARTICIPLE_ADVERB = 8 #деепричастие
+    ADJ_SHORT         = 9 #краткое прилагательное
     ADP               = 10
-    CONJ              = 11
-    PART              = 12
-    ADV               = 13
-    COMPARATIVE       = 14 #compatibility with aot
-    ABBREVIATION      = 15 #compatibility with aot
-    NUMBER            = 16 #compatibility with aot
-    PARTICIPLE        = 17 #полное причастие (aot)
-    PARTICIPLE_SHORT  = 18 #краткое причастие (aot)
-    PARTICIPLE_ADVERB = 19 #деепричастие (aot)
-    ADJ_SHORT         = 20 #краткое прилагательное (aot)
-    DET               = 21 #end of aot types
-    AUX               = 22
-    PUNCT             = 23
-    SCONJ             = 24
-    CCONJ             = 25
-    SYM               = 26
-    X                 = 27
+    PART              = 11
+    ADV               = 12
+    CCONJ             = 13
+    SCONJ             = 14
+    SYM               = 15
+    AUX               = 16
+    DET               = 17
+    X                 = 18
+    INTJ              = 19
+    CONJ              = 20
+    PUNCT             = 21
+    UNDEF             = 22
+
+
 
 POS_TAG_DICT = _make_dict_for_enum(PosTag)
 
