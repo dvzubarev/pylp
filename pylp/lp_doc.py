@@ -197,6 +197,10 @@ class Doc:
         self._text_hash = m.hexdigest()
 
     @property
+    def text_hash(self) -> Optional[str]:
+        return self._text_hash
+
+    @property
     def lang(self) -> Optional[common.Lang]:
         return self._lang
 
@@ -213,6 +217,9 @@ class Doc:
     def get_fragments(self, name='default'):
         return self._fragments.get(name)
 
+    def get_all_fragments(self):
+        return self._fragments
+
     def add_sent(self, sent_obj: Sent):
         self._sents.append(sent_obj)
 
@@ -228,6 +235,9 @@ class Doc:
 
     def add_ling_prop(self, val):
         self._ling_meta['properties'].append(val)
+
+    def get_ling_meta(self):
+        return self._ling_meta
 
     def __len__(self) -> int:
         return len(self._sents)
@@ -266,6 +276,7 @@ class Doc:
 
         if self._text is not None:
             d['text'] = self._text
+        if self._text_hash is not None:
             d['text_hash'] = self._text_hash
 
         if self._lang is not None:
@@ -284,6 +295,7 @@ class Doc:
         text_hash = None
         if 'text' in dic:
             text = dic['text']
+        if 'text_hash' in dic:
             text_hash = dic['text_hash']
         doc._text = text
         doc._text_hash = text_hash

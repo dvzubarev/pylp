@@ -16,20 +16,6 @@ def word_id_combiner(words) -> int:
     return w
 
 
-def make_words_dict(doc):
-    # TODO Sort words by freq
-    # most frequent words should have smaller indexes
-    d = {}
-    flatten_words = []
-    for sent in doc:
-        for w in sent:
-            if w not in d:
-                d[w] = len(flatten_words)
-                flatten_words.append(w)
-
-    return flatten_words, d
-
-
 def adjust_syntax_links(new_sent: List[WordObj], new_positions: List[int]):
     """Example:
     old_sent: ['word', ',', 'word2', ':', 'word3']
