@@ -40,6 +40,8 @@ class WordObj:
         pos_tag=common.PosTag.UNDEF,
         lemma=None,
         form=None,
+        offset=None,
+        length=None,
         parent_offs=None,
         synt_link=None,
         lang=None,
@@ -57,8 +59,8 @@ class WordObj:
         self._word_id: Optional[int] = None
 
         # token in the original text
-        self.offset: Optional[int] = None
-        self.len: Optional[int] = None  # len of form
+        self.offset: Optional[int] = offset
+        self.len: Optional[int] = length  # len of a token(form)
 
         # synt
         self.parent_offs: Optional[int] = parent_offs
@@ -101,8 +103,8 @@ class WordObj:
             d[Attr.WORD_LEMMA] = self.lemma
         if self.form is not None:
             d[Attr.WORD_FORM] = self.form
-        if self.word_id is not None:
-            d[Attr.WORD_ID] = self.word_id
+        if self._word_id is not None:
+            d[Attr.WORD_ID] = self._word_id
         if self.offset is not None:
             d[Attr.OFFSET] = self.offset
         if self.len is not None:
@@ -137,6 +139,8 @@ class WordObj:
     def from_dict(cls, dic):
         word_obj = cls()
         for key, value in dic.items():
+            if value is None:
+                continue
             match key:
                 case Attr.POS_TAG:
                     word_obj.pos_tag = common.PosTag(value)
@@ -153,27 +157,27 @@ class WordObj:
                 case Attr.SYNTAX_PARENT:
                     word_obj.parent_offs = value
                 case Attr.SYNTAX_LINK_NAME:
-                    word_obj.synt_link = value
+                    word_obj.synt_link = common.SyntLink(value)
                 case Attr.LANG:
-                    word_obj.lang = value
+                    word_obj.lang = common.Lang(value)
                 case Attr.NUMBER:
-                    word_obj.number = value
+                    word_obj.number = common.WordNumber(value)
                 case Attr.GENDER:
-                    word_obj.gender = value
+                    word_obj.gender = common.WordGender(value)
                 case Attr.CASE:
-                    word_obj.case = value
+                    word_obj.case = common.WordCase(value)
                 case Attr.TENSE:
-                    word_obj.tense = value
+                    word_obj.tense = common.WordTense(value)
                 case Attr.PERSON:
-                    word_obj.person = value
+                    word_obj.person = common.WordPerson(value)
                 case Attr.COMPARISON:
-                    word_obj.comp = value
+                    word_obj.comp = common.WordComparison(value)
                 case Attr.ASPECT:
-                    word_obj.aspect = value
+                    word_obj.aspect = common.WordAspect(value)
                 case Attr.VOICE:
-                    word_obj.voice = value
+                    word_obj.voice = common.WordVoice(value)
                 case Attr.ANIMACY:
-                    word_obj.animacy = value
+                    word_obj.animacy = common.WordAnimacy(value)
         return word_obj
 
     def __str__(self) -> str:

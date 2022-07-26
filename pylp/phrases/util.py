@@ -32,8 +32,11 @@ def add_phrases_to_doc(
     MaxN,
     min_cnt=0,
     builder_cls=PhraseBuilder,
-    builder_opts=PhraseBuilderOpts(),
+    builder_opts=None,
 ):
+    if builder_opts is None:
+        builder_opts = PhraseBuilderOpts()
+
     builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
     builder.build_phrases_for_doc(doc_obj)
     if min_cnt:

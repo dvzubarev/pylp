@@ -3,6 +3,7 @@
 
 
 import logging
+import functools
 
 from pylp.common import PosTag
 from pylp.common import Lang
@@ -29,6 +30,11 @@ class Filtratus:
 
         for sent in doc_obj:
             sent.filter_words(filters)
+
+
+def create_filter_by_pos_tags(sw_pos_tags):
+    filtratus = Filtratus(['stopwords'], {'sw_pos_tags': sw_pos_tags})
+    return functools.partial(filtratus, '', kinds=['stopwords'])
 
 
 class AbcFilter:
