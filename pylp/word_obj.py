@@ -27,7 +27,7 @@ class WordObj:
         'case',
         'tense',
         'person',
-        'comp',
+        'degree',
         'aspect',
         'voice',
         'animacy',
@@ -75,7 +75,7 @@ class WordObj:
         self.case: Optional[common.WordCase] = case
         self.tense: Optional[common.WordTense] = tense
         self.person: Optional[common.WordPerson] = None
-        self.comp: Optional[common.WordComparison] = None
+        self.degree: Optional[common.WordDegree] = None
         self.aspect: Optional[common.WordAspect] = None
         self.voice: Optional[common.WordVoice] = voice
         self.animacy: Optional[common.WordAnimacy] = None
@@ -125,8 +125,8 @@ class WordObj:
             d[Attr.TENSE] = self.tense
         if self.person is not None:
             d[Attr.PERSON] = self.person
-        if self.comp is not None:
-            d[Attr.COMPARISON] = self.comp
+        if self.degree is not None:
+            d[Attr.DEGREE] = self.degree
         if self.aspect is not None:
             d[Attr.ASPECT] = self.aspect
         if self.voice is not None:
@@ -170,8 +170,8 @@ class WordObj:
                     word_obj.tense = common.WordTense(value)
                 case Attr.PERSON:
                     word_obj.person = common.WordPerson(value)
-                case Attr.COMPARISON:
-                    word_obj.comp = common.WordComparison(value)
+                case Attr.DEGREE:
+                    word_obj.degree = common.WordDegree(value)
                 case Attr.ASPECT:
                     word_obj.aspect = common.WordAspect(value)
                 case Attr.VOICE:
@@ -209,8 +209,8 @@ class WordObj:
             parts_s.append(f"tense: {es(self.tense)}, ")
         if self.person is not None:
             parts_s.append(f"person: {es(self.person)}, ")
-        if self.comp is not None:
-            parts_s.append(f"comp: {es(self.comp)}, ")
+        if self.degree is not None:
+            parts_s.append(f"degree: {es(self.degree)}, ")
         if self.aspect is not None:
             parts_s.append(f"aspect: {es(self.aspect)}, ")
         if self.voice is not None:

@@ -157,10 +157,14 @@ class WordPerson(enum.IntEnum):
     III = 2
 WORD_PERSON_DICT = _make_dict_for_enum(WordPerson, {'I': '1', 'II': '2', 'III': '3'})
 
-class WordComparison(enum.IntEnum):
-    SUP = 0
-    CMP = 1
-WORD_COMPARISON_DICT = _make_dict_for_enum(WordComparison)
+class WordDegree(enum.IntEnum):
+    POS = 0
+    EQU = 1
+    CMP = 2
+    SUP = 3
+    ABS = 4
+
+WORD_DEGREE_DICT = _make_dict_for_enum(WordDegree)
 
 class WordAspect(enum.IntEnum):
     IMP  = 0
@@ -200,7 +204,7 @@ class Attr:
     CASE             = 'c'
     TENSE            = 'v'
     PERSON           = '1'
-    COMPARISON       = 'C'
+    DEGREE           = '>'
     ASPECT           = 'a'
     VOICE            = 'V'
     ANIMACY          = 'A'

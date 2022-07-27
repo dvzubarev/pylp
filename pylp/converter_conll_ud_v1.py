@@ -148,10 +148,9 @@ class ConverterConllUDV1:
         if 'Person' in morph_feats:
             word_obj.person = common.WORD_PERSON_DICT[morph_feats['Person'].upper()]
 
-        if 'Comparision' in morph_feats:
-            word_obj.comp = common.WORD_COMPARISON_DICT[morph_feats['Comparision'].upper()]
+        if 'Degree' in morph_feats:
+            word_obj.degree = common.WORD_DEGREE_DICT[morph_feats['Degree'].upper()]
 
-        # TODO skip default
         if 'Aspect' in morph_feats:
             word_obj.aspect = common.WORD_ASPECT_DICT[morph_feats['Aspect'].upper()]
 
