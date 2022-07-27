@@ -94,14 +94,14 @@ class ConverterConllUDV1:
         morph_feats = [(s.split('=')) for s in morph_str.split('|') if len(morph_str) > 2]
         morph_feats = dict(morph_feats)
 
-        # TODO verb moods? other verb forms Fin? Imp?
+        # TODO other verb forms Fin? Imp?
         # TODO 'VerbForm' may occur not only for verbs
         if pos_tag == common.PosTag.VERB:
             self._adjust_verb(morph_feats, word_obj)
         elif pos_tag == common.PosTag.ADJ:
             self._adjust_adj(morph_feats, word_obj)
 
-        self._assign_morph_features(word_obj, morph_feats)
+        self._assign_morph_features(word_obj, morph_feats, pos_tag)
 
         if word[self.HEAD] != '_':
             parent_pos = int(word[self.HEAD]) - 1
@@ -133,7 +133,7 @@ class ConverterConllUDV1:
         if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
             word_obj.pos_tag = common.PosTag.ADJ_SHORT
 
-    def _assign_morph_features(self, word_obj: WordObj, morph_feats):
+    def _assign_morph_features(self, word_obj: WordObj, morph_feats, pos_tag):
         if 'Number' in morph_feats:
             word_obj.number = common.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
         if 'Gender' in morph_feats:
@@ -157,6 +157,11 @@ class ConverterConllUDV1:
         if 'Voice' in morph_feats:
             word_obj.voice = common.WORD_VOICE_DICT[morph_feats['Voice'].upper()]
 
+        if pos_tag == common.PosTag.VERB and 'Mood' in morph_feats:
+            word_obj.mood = common.WORD_MOOD_DICT[morph_feats['Mood'].upper()]
+
+        if 'NumType' in morph_feats:
+            word_obj.num_type = common.WORD_NUM_TYPE_DICT[morph_feats['NumType'].upper()]
+
         if 'Animacy' in morph_feats:
             word_obj.animacy = common.WORD_ANIMACY_DICT[morph_feats['Animacy'].upper()]
-        # TODO valency?

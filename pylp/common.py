@@ -178,6 +178,20 @@ class WordVoice(enum.IntEnum):
     MID = 2
 WORD_VOICE_DICT = _make_dict_for_enum(WordVoice)
 
+class WordMood(enum.IntEnum):
+    IND = 0
+    IMP = 1
+    CND = 2
+WORD_MOOD_DICT = _make_dict_for_enum(WordMood)
+
+class WordNumType(enum.IntEnum):
+    CARD = 0
+    ORD = 1
+    MULT = 2
+    FRAC = 3
+    RANGE = 4
+WORD_NUM_TYPE_DICT = _make_dict_for_enum(WordNumType)
+
 class WordAnimacy(enum.IntEnum):
     INAN = 0
     ANIM = 1
@@ -207,6 +221,8 @@ class Attr:
     DEGREE           = '>'
     ASPECT           = 'a'
     VOICE            = 'V'
+    MOOD             = 'm'
+    NUM_TYPE         = '#'
     ANIMACY          = 'A'
     OFFSET           = 'O'
     LENGTH           = 'S'

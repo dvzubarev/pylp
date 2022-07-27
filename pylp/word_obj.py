@@ -30,6 +30,8 @@ class WordObj:
         'degree',
         'aspect',
         'voice',
+        'mood',
+        'num_type',
         'animacy',
         'extra',
     )
@@ -78,6 +80,8 @@ class WordObj:
         self.degree: Optional[common.WordDegree] = None
         self.aspect: Optional[common.WordAspect] = None
         self.voice: Optional[common.WordVoice] = voice
+        self.mood: Optional[common.WordMood] = None
+        self.num_type: Optional[common.WordNumType] = None
         self.animacy: Optional[common.WordAnimacy] = None
 
         self.extra: dict = {}
@@ -131,6 +135,10 @@ class WordObj:
             d[Attr.ASPECT] = self.aspect
         if self.voice is not None:
             d[Attr.VOICE] = self.voice
+        if self.mood is not None:
+            d[Attr.MOOD] = self.mood
+        if self.num_type is not None:
+            d[Attr.NUM_TYPE] = self.num_type
         if self.animacy is not None:
             d[Attr.ANIMACY] = self.animacy
         return d
@@ -176,6 +184,10 @@ class WordObj:
                     word_obj.aspect = common.WordAspect(value)
                 case Attr.VOICE:
                     word_obj.voice = common.WordVoice(value)
+                case Attr.MOOD:
+                    word_obj.mood = common.WordMood(value)
+                case Attr.NUM_TYPE:
+                    word_obj.num_type = common.WordNumType(value)
                 case Attr.ANIMACY:
                     word_obj.animacy = common.WordAnimacy(value)
         return word_obj
@@ -215,6 +227,10 @@ class WordObj:
             parts_s.append(f"aspect: {es(self.aspect)}, ")
         if self.voice is not None:
             parts_s.append(f"voice: {es(self.voice)}, ")
+        if self.mood is not None:
+            parts_s.append(f"mood: {es(self.mood)}, ")
+        if self.num_type is not None:
+            parts_s.append(f"num_type: {es(self.num_type)}, ")
         if self.animacy is not None:
             parts_s.append(f"animacy: {es(self.animacy)}, ")
         parts_s[-1] = parts_s[-1][:-2]
