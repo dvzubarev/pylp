@@ -9,7 +9,7 @@
 }:
 buildPythonPackage {
   pname = "pylp";
-  version = "0.1.0";
+  version = "0.5.0";
   inherit src;
 
   propagatedBuildInputs=[ujson pyexbase pymorphy2];
