@@ -2,7 +2,7 @@
   description = "Python library for linguistic processing";
 
   inputs = {
-    textapp-pkgs.url = "git+ssh://git@tsa04.isa.ru/textapp/textapp-pkgs?ref=flakes";
+    textapp-pkgs.url = "git+ssh://git@tsa04.isa.ru/textapp/textapp-pkgs";
     pyexbase.url = "git+ssh://git@tsa04.isa.ru/textapp/pyexbase";
 
     pyexbase.inputs = {
