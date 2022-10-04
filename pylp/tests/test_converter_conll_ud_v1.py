@@ -52,7 +52,7 @@ CONLLU_TEXT_WITH_TAGS = """# newdoc id = temp
 3	раму	рама	NOUN	_	Animacy=Inan|Case=Acc|Gender=Fem|Number=Sing	_	_	_	SpaceAfter=No
 4	,	,	PUNCT	_	_	_	_	_	_
 5	обещая	обещать	VERB	_	Aspect=Imp|Tense=Pres|VerbForm=Conv|Voice=Act	_	_	_	_
-6	не	не	PART	_	_	_	_	_	_
+6	не	не	RB-ORPH	_	_	_	_	_	_
 7	работать	работать	VERB	_	Aspect=Imp|VerbForm=Inf|Voice=Act	_	_	_	_
 8	по	по	ADP	_	_	_	_	_	_
 9	выходным	выходная	NOUN	_	Animacy=Inan|Case=Dat|Gender=Fem|Number=Plur	_	_	_	SpaceAfter=No

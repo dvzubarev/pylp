@@ -83,7 +83,9 @@ class ConverterConllUDV1:
         if ud_tag == '_':
             pos_tag = common.PosTag.UNDEF
         else:
-            pos_tag = common.POS_TAG_DICT[ud_tag]
+            pos_tag = common.POS_TAG_DICT.get(ud_tag, common.PosTag.UNDEF)
+            if pos_tag == common.PosTag.UNDEF:
+                logging.warning("Unknown pos tag: %s", ud_tag)
 
         lemma = word[self.LEMMA].lower()
         if lemma == '_':
