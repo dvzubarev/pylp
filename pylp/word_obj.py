@@ -89,7 +89,7 @@ class WordObj:
     @property
     def word_id(self) -> Optional[int]:
         if self._word_id is None:
-            if not self.lemma:
+            if self.lemma is None:
                 return None
             if self.lang is None:
                 self._word_id = libpyexbase.detect_lang_calc_word_id(self.lemma, True)

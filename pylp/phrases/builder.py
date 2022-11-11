@@ -196,10 +196,14 @@ class BasicPhraseBuilder:
             is_good_head = self._test_head(word_obj, i, sent, all_mods_index)
 
             if is_good_head or is_good_mod:
-                cur_word_index = [[] for _ in range(self._max_n)]
-                words_index[i] = cur_word_index
-                # init words_index's level 0
-                cur_word_index[0] = [Phrase(i, word_obj)]
+                try:
+                    phrase = Phrase(i, word_obj)
+                    cur_word_index = [[] for _ in range(self._max_n)]
+                    words_index[i] = cur_word_index
+                    # init words_index's level 0
+                    cur_word_index[0] = [phrase]
+                except RuntimeError as ex:
+                    logging.warning("Failed to create phrase from word_obj: %s", ex)
 
             if is_good_mod and word_obj.parent_offs:
                 head_pos = i + word_obj.parent_offs

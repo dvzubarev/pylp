@@ -120,10 +120,13 @@ class RuLemmatizer:
 
         for sent in doc_obj:
             for word_obj in sent:
-                # pos_tag = word_obj.get(Attr.POS_TAG)
                 if word_obj.pos_tag not in self._fix_tags:
                     continue
                 word = word_obj.form
+                if not word:
+                    logging.warning("Lemmatizer: Empty form in the word %s", word_obj)
+                    continue
+
                 if word not in parsed_cache:
                     parsed_cache[word] = self._morph.parse(word)
                 results = parsed_cache[word]
@@ -138,12 +141,16 @@ class RuLemmatizer:
 
                 if pymorphy_res is not None:
                     lemma = self._get_lemma(pymorphy_res, word_obj.pos_tag)
-                    if current_norm != lemma:
+                    if lemma and current_norm != lemma:
                         logging.debug(
                             "fixing norm for form %s: %s -> %s", word, current_norm, lemma
                         )
                         stat.fixed_norms += 1
                         word_obj.lemma = lemma
+
+                if not word_obj.lemma:
+                    logging.warning("Lemmatizer: Empty lemma in the word %s", word_obj)
+                    continue
 
                 if pymorphy_res is not None and self._opts.fix_feats:
                     self._fix_feats_impl(pymorphy_res, word_obj, stat)
