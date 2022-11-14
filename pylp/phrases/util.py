@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import Any, List
+from typing import Any, Iterator, List
 import collections
 import logging
 
@@ -55,13 +55,13 @@ def make_phrases(
 
 
 def replace_words_with_phrases(
-    sent_words: List[str],
-    phrases: List[Phrase],
+    sent_words: List[Any],
+    phrases: Iterator[Phrase],
     allow_overlapping_phrases=True,
     sort_key=lambda p: -p.size(),
     keep_filler=False,
     filler=None,
-):
+) -> List[Any | Phrase]:
     """phrases are list of prhases from the build_phrases_iter function"""
 
     if not phrases:
