@@ -362,3 +362,199 @@ def test_ru_propn_inflect4():
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words(False) == ['красивая', 'Валентина', 'Иванова']
+
+
+def test_simple_en_pres_part_inflect_1():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['fly', 'enemy'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE_ADVERB),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['flying', 'enemy']
+
+
+def test_simple_en_pres_part_inflect_2():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['slide', 'window'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['sliding', 'window']
+
+
+def test_simple_en_pres_part_inflect_3():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['can', 'food'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE, tense=WordTense.PRES),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['canning', 'food']
+
+
+def test_simple_en_past_part_inflect_1():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['desire', 'objective'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE, tense=WordTense.PAST),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['desired', 'objective']
+
+
+def test_simple_en_past_part_inflect_2():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['employ', 'man'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE, tense=WordTense.PAST),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['employed', 'man']
+
+
+def test_simple_en_past_part_inflect_3():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['study', 'course'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE, tense=WordTense.PAST),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['studied', 'course']
+
+
+def test_en_3phrase_inflect():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['undefine', 'fly', 'object'])
+    p.set_deps([2, 1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE, tense=WordTense.PAST),
+            WordObj(pos_tag=PosTag.PARTICIPLE),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['undefined', 'flying', 'object']
+
+
+def test_en_plural_inflect_1():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['study', 'course', 'match'])
+    p.set_deps([1, 1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['studies', 'courses', 'matches']
+
+
+def test_en_plural_inflect_2():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2, 3])
+    p.set_words(['boy', 'kiss', 'wife', 'vertex'])
+    p.set_deps([1, 1, 0, -1])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['boys', 'kisses', 'wives', 'vertices']
+
+
+def test_en_plural_inflect_3():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2, 3])
+    p.set_words(['potato', 'child', 'mouse', 'crisis'])
+    p.set_deps([1, 1, 0, -1])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PROPN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.PROPN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.PROPN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.PROPN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['Potatoes', 'Children', 'Mice', 'Crises']

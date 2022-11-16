@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import List, Optional
+import gzip
+import json
+import importlib.resources
+from typing import List, Mapping, Optional
 
 import pymorphy2
 
@@ -30,6 +33,24 @@ class Inflector:
         raise NotImplementedError("inflect pair is not implemented")
 
 
+class VerbExcpForms:
+    __slots__ = ('pres_part', 'past_part')
+
+    def __init__(self, pres_part: Optional[str] = None, past_part: Optional[str] = None) -> None:
+        self.pres_part = pres_part
+        self.past_part = past_part
+
+    def to_json(self):
+        return {'prp': self.pres_part, 'pap': self.past_part}
+
+    @classmethod
+    def from_json(cls, obj):
+        return cls(pres_part=obj.get('prp'), past_part=obj.get('pap'))
+
+    def __repr__(self) -> str:
+        return f"VerbExcpForms(pres_part={self.pres_part}, past_part={self.past_part})"
+
+
 # API
 
 
@@ -39,11 +60,14 @@ def inflect_phrases(phrases: List[Phrase], sent: lp_doc.Sent, text_lang):
 
 
 def inflect_phrase(phrase: Phrase, sent: lp_doc.Sent, text_lang):
-    word_lang = lambda o: text_lang if o.lang is None else o.lang
-    if any(word_lang(sent[i]) == Lang.RU for i in phrase.get_sent_pos_list()):
+    word_lang_func = lambda o: text_lang if o.lang is None else o.lang
+    word_langs = [word_lang_func(sent[i]) for i in phrase.get_sent_pos_list()]
+    if any(l == Lang.RU for l in word_langs):
         return inflect_ru_phrase(phrase, sent)
+    if any(l == Lang.EN for l in word_langs):
+        return inflect_en_phrase(phrase, sent)
 
-    return inflect_en_phrase(phrase, sent)
+    raise RuntimeError(f"Unsupported language in phrase to inflect: {phrase}")
 
 
 def inflect_ru_phrase(phrase: Phrase, sent: lp_doc.Sent):
@@ -51,8 +75,7 @@ def inflect_ru_phrase(phrase: Phrase, sent: lp_doc.Sent):
 
 
 def inflect_en_phrase(phrase: Phrase, sent: lp_doc.Sent):
-    # raise NotImplementedError("en inflecting does not implemented yet!")
-    pass
+    _inflect_mods_of_head(phrase, sent, phrase.get_head_pos(), inflector=_get_en_inflector())
 
 
 # Implementation
@@ -168,7 +191,6 @@ class RuInflector(Inflector):
                 if mod_obj.pos_tag == PosTag.ADJ:
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'ADJF', feats)
                 else:
-                    print("feats ", feats)
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'PRTF', feats, mod_obj)
 
         if form is not None:
@@ -235,3 +257,112 @@ class RuInflector(Inflector):
                 return inflected.word
 
         return None
+
+
+EN_INFLECTOR = None
+
+
+def _get_en_inflector():
+    global EN_INFLECTOR
+    if EN_INFLECTOR is None:
+        EN_INFLECTOR = EnInflector()
+    return EN_INFLECTOR
+
+
+class EnInflector(Inflector):
+    def __init__(self):
+        p = importlib.resources.files('pylp.phrases.data').joinpath('en_lemma_exc.json.gz')
+        with p.open('rb') as bf:
+            gf = gzip.GzipFile(fileobj=bf)
+            excep_dict = json.load(
+                gf, object_hook=lambda d: d if 'pap' not in d else VerbExcpForms.from_json(d)
+            )
+
+        self._noun_excep_dict: Mapping[str, str] = excep_dict['noun']
+        self._verb_excep_dict: Mapping[str, VerbExcpForms] = excep_dict['verb']
+
+    def _inflect_plural(self, lemma: str) -> Optional[str]:
+        if not lemma:
+            return None
+        form = self._noun_excep_dict.get(lemma)
+        if form is not None:
+            return form
+
+        last_letter = lemma[-1]
+        if last_letter in ('s', 'x', 'z'):
+            return lemma + 'es'
+
+        if len(lemma) > 1:
+            last_two_letters = lemma[-2:]
+            if last_two_letters in ('sh', 'ch'):
+                return lemma + 'es'
+
+            if last_letter == 'y' and lemma[-2] not in 'aeiou':
+                return lemma[:-1] + 'ies'
+
+        return lemma + 's'
+
+    def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
+        head_sent_pos = phrase.get_sent_pos_list()[head_pos]
+        head_obj = sent[head_sent_pos]
+
+        phrase_words = phrase.get_words(False)
+        if head_obj.number == WordNumber.PLUR:
+            form = self._inflect_plural(phrase_words[head_pos])
+            if form is not None:
+                phrase_words[head_pos] = form
+
+        if head_obj.pos_tag == PosTag.PROPN:
+            phrase_words[head_pos] = phrase_words[head_pos].capitalize()
+
+    def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
+        head_sent_pos = phrase.get_sent_pos_list()[head_pos]
+        head_obj = sent[head_sent_pos]
+        mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
+        mod_obj = sent[mod_sent_pos]
+
+        phrase_words = phrase.get_words(False)
+        current_lemma = phrase_words[mod_pos]
+        form = None
+        if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
+
+            if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
+                if mod_obj.number == WordNumber.PLUR:
+                    form = self._inflect_plural(current_lemma)
+                if mod_obj.pos_tag == PosTag.PROPN:
+                    if form is None:
+                        form = current_lemma
+                    form = form.capitalize()
+
+            elif (
+                mod_obj.pos_tag == PosTag.PARTICIPLE and mod_obj.tense in (None, WordTense.PRES)
+            ) or mod_obj.pos_tag == PosTag.PARTICIPLE_ADVERB:
+                # The second condition is a legacy of erroneous convertation from UD
+                # check exceptions
+                if (
+                    verb_excp_form := self._verb_excep_dict.get(current_lemma)
+                ) and verb_excp_form.pres_part:
+                    form = verb_excp_form.pres_part
+                else:
+                    # inflect by rules
+                    if current_lemma.endswith('ie'):
+                        form = current_lemma[:-2] + 'ying'
+                    elif current_lemma.endswith('e'):
+                        form = current_lemma[:-1] + 'ing'
+                    else:
+                        form = current_lemma + 'ing'
+            elif mod_obj.pos_tag == PosTag.PARTICIPLE and mod_obj.tense == WordTense.PAST:
+                # check exceptions
+                if (
+                    verb_excp_form := self._verb_excep_dict.get(current_lemma)
+                ) and verb_excp_form.past_part:
+                    form = verb_excp_form.past_part
+                else:
+                    # inflect by rules
+                    if current_lemma.endswith('e'):
+                        form = current_lemma + 'd'
+                    else:
+                        form = current_lemma + 'ed'
+
+        if form is not None:
+            phrase_words[mod_pos] = form
