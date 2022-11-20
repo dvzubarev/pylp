@@ -208,10 +208,8 @@ class RuInflector(Inflector):
         if mod_obj is None:
             return None
 
-        voice = mod_obj.voice
-        tense = mod_obj.tense
-        if voice is None or tense is None:
-            return None
+        voice = mod_obj.voice if mod_obj.voice is not None else WordVoice.ACT
+        tense = mod_obj.tense if mod_obj.tense is not None else WordTense.PRES
 
         if voice == WordVoice.ACT:
             voice = 'actv'
@@ -242,16 +240,20 @@ class RuInflector(Inflector):
 
         parsed = None
 
-        if tag == "PRTF":
-            parsed = self._pymorphy_find_participle(results[0], mod_obj)
-        else:
+        for res in results:
+            if res.tag.POS == tag and res.tag.case == 'nomn':
+                parsed = res
+                break
+        if parsed is None and tag == 'PRTF':
             for res in results:
-                if res.tag.POS == tag and res.tag.case == 'nomn':
-                    parsed = res
-                    break
+                if res.tag.POS == 'INFN':
+                    parsed = self._pymorphy_find_participle(res, mod_obj)
+                    if parsed is not None:
+                        break
 
         if parsed is not None:
             inflected = parsed.inflect(feats)
+
             if inflected is not None:
                 return inflected.word
 

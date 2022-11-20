@@ -157,6 +157,30 @@ def test_plural_inflect2():
     assert p.get_words(False) == ['красивые', 'пейзажи']
 
 
+def test_plural_inflect3():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['вооружённый', 'сила'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    sent = lp_doc.Sent(
+        [
+            WordObj(
+                pos_tag=PosTag.PARTICIPLE,
+                number=WordNumber.PLUR,
+                case=WordCase.GEN,
+                voice=WordVoice.PASS,
+                tense=WordTense.PAST,
+            ),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR, case=WordCase.GEN),
+        ]
+    )
+
+    inflect_ru_phrase(p, sent)
+    assert p.get_words(False) == ['вооружённые', 'силы']
+
+
 def test_UN_inflect():
     p = Phrase()
     p.set_head_pos(0)
