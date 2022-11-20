@@ -70,3 +70,14 @@ def test_ru_lem4(ru_lemmatizer):
     assert word_fixed.lemma == 'выходной'
     assert word_fixed.gender == WordGender.MASC
     assert word_fixed.number == WordNumber.PLUR
+
+
+def test_ru_lem5(ru_lemmatizer):
+    word1 = WordObj(lemma='сила', form='силы', pos_tag=PosTag.NOUN, number=WordNumber.PLUR)
+
+    doc = _make_doc_obj([[word1]])
+
+    ru_lemmatizer(doc)
+    word_fixed = doc[0][0]
+    # shouldn't fix word number to SING
+    assert word_fixed.number == WordNumber.PLUR

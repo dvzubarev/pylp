@@ -64,17 +64,22 @@ class RuLemmatizer:
 
         self._rev_gender_mapping = {v: k for k, v in self._gender_mapping.items()}
 
-    def _find_matching_res(self, morphy_tag, results, current_norm):
-        # try to found the same norm as our current lemma
-        if current_norm is not None:
-            for res in results:
-                if res.tag.POS == morphy_tag and res.normal_form == current_norm:
-                    # logging.debug("Found the same norm for res: %s", res)
-                    return res
+    def _find_matching_res(self, morphy_tag, results, word_obj: WordObj):
+        # try to find the same norm as our current lemma
+        max_matching_score = 0
+        parsed_res = None
         for res in results:
-            if res.tag.POS == morphy_tag:
-                return res
-        return None
+            score = 0
+            score += word_obj.lemma == res.normal_form
+            score += res.tag.POS == morphy_tag
+            score += self._gender_mapping.get(word_obj.gender) == res.tag.gender
+            score += res.tag.number == (
+                'plur' if word_obj.number == common.WordNumber.PLUR else 'sing'
+            )
+            if score > max_matching_score:
+                max_matching_score = score
+                parsed_res = res
+        return parsed_res
 
     def _fix_feats_impl(self, pymorphy_res, word_obj: WordObj, stat: Stat):
         gender = word_obj.gender
@@ -135,15 +140,14 @@ class RuLemmatizer:
                 if all(r.tag.POS == 'INFN' for r in results):
                     continue
                 morphy_tag = self._pos_tag_mapping[word_obj.pos_tag]
-                current_norm = word_obj.lemma
-                pymorphy_res = self._find_matching_res(morphy_tag, results, current_norm)
+                pymorphy_res = self._find_matching_res(morphy_tag, results, word_obj)
                 stat.not_found += pymorphy_res is None
 
                 if pymorphy_res is not None:
                     lemma = self._get_lemma(pymorphy_res, word_obj.pos_tag)
-                    if lemma and current_norm != lemma:
+                    if lemma and word_obj.lemma != lemma:
                         logging.debug(
-                            "fixing norm for form %s: %s -> %s", word, current_norm, lemma
+                            "fixing norm for form %s: %s -> %s", word, word_obj.lemma, lemma
                         )
                         stat.fixed_norms += 1
                         word_obj.lemma = lemma
