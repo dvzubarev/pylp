@@ -124,14 +124,13 @@ class RuInflector(Inflector):
         head_obj = sent[head_sent_pos]
         phrase_words = phrase.get_words(False)
 
-        if head_obj.pos_tag == PosTag.NOUN:
-            if head_obj.number is None or head_obj.number == WordNumber.SING:
-                return
+        if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
+            if head_obj.number == WordNumber.PLUR:
+                form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'plur'})
+                if form is not None:
+                    phrase_words[head_pos] = form
 
-            form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'plur'})
-            if form is not None:
-                phrase_words[head_pos] = form
-        elif head_obj.pos_tag == PosTag.PROPN:
+        if head_obj.pos_tag == PosTag.PROPN:
             phrase_words[head_pos] = phrase_words[head_pos].capitalize()
 
     def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
