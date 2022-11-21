@@ -658,3 +658,24 @@ def test_en_plural_inflect_3():
 
     inflect_phrase(p, sent, Lang.EN)
     assert p.get_words(False) == ['Potatoes', 'Children', 'Mice', 'Crises']
+
+
+def test_en_plural_inflect_4():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1, 2, 3])
+    p.set_words(['many', 'people', 'man', 'woman'])
+    p.set_deps([1, 0, -1, -2])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['many', 'people', 'men', 'women']

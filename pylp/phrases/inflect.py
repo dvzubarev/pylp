@@ -291,6 +291,53 @@ def _get_en_inflector():
     return EN_INFLECTOR
 
 
+EN_ALREADY_PLUR = frozenset(
+    [
+        'people',
+        'fish',
+        'sheep',
+        'deer',
+        'moose',
+        'aircraft',
+        'rights',
+        'statistics',
+        'raybans',
+        'belongings',
+        'binoculars',
+        'boxers',
+        'briefs',
+        'clothes',
+        'congratulations',
+        'dislikes',
+        'earnings',
+        'glasses',
+        'goggles',
+        'goods',
+        'headphones',
+        'jeans',
+        'knickers',
+        'likes',
+        'outskirts',
+        'panties',
+        'pants',
+        'pliers',
+        'premises',
+        'pyjamas',
+        'savings',
+        'scissors',
+        'shorts',
+        'stairs',
+        'sunglasses',
+        'surroundings',
+        'thanks',
+        'tights',
+        'tongs',
+        'trousers',
+        'tweezers',
+    ]
+)
+
+
 class EnInflector(Inflector):
     def __init__(self):
         p = importlib.resources.files('pylp.phrases.data').joinpath('en_lemma_exc.json.gz')
@@ -301,11 +348,15 @@ class EnInflector(Inflector):
             )
 
         self._noun_excep_dict: Mapping[str, str] = excep_dict['noun']
+        # TODO there is no these words in spacy's en_lemma_exc.json
+        self._noun_excep_dict['woman'] = 'women'
         self._verb_excep_dict: Mapping[str, VerbExcpForms] = excep_dict['verb']
 
     def _inflect_plural(self, lemma: str) -> Optional[str]:
         if not lemma:
             return None
+        if lemma in EN_ALREADY_PLUR:
+            return lemma
         form = self._noun_excep_dict.get(lemma)
         if form is not None:
             return form
