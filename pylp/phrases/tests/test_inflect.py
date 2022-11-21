@@ -331,6 +331,63 @@ def test_inflect_ru_phrase4():
     assert p.get_words(False) == ['живые', 'глаза']
 
 
+def test_inflect_ru_nummod_1():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['миллион', 'человек'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.SING, synt_link=SyntLink.NUMMOD),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['миллион', 'людей']
+
+
+def test_inflect_ru_nummod_2():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['один', 'человек'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, synt_link=SyntLink.NUMMOD),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.SING),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['один', 'человек']
+
+
+def test_inflect_ru_nummod_2():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['двое', 'человек'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NUM, synt_link=SyntLink.NUMMOD),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['двое', 'людей']
+
+
 def test_ru_propn_inflect1():
     p = Phrase()
     p.set_head_pos(0)
