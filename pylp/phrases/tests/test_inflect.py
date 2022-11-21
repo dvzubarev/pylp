@@ -120,6 +120,25 @@ def test_simple_noun_inflect():
     assert p.get_words(False) == ['шляпа', 'капитана']
 
 
+def test_simple_noun_inflect_2():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['точка', 'зрение'])
+    p.set_deps([0, -1])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM),
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.NEUT, synt_link=SyntLink.COMPOUND),
+        ]
+    )
+
+    inflect_ru_phrase(p, sent)
+    assert p.get_words(False) == ['точка', 'зрения']
+
+
 def test_plural_inflect():
     p = Phrase()
     p.set_head_pos(1)

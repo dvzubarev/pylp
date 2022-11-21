@@ -143,9 +143,9 @@ class RuInflector(Inflector):
         form = None
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
 
-            if (
-                mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN)
-                and mod_obj.synt_link == SyntLink.NMOD
+            if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN) and mod_obj.synt_link in (
+                SyntLink.NMOD,
+                SyntLink.COMPOUND,
             ):
                 number = 'plur' if mod_obj.number == WordNumber.PLUR else 'sing'
                 form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {number, 'gent'})
