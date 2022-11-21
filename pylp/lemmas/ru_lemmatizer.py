@@ -8,7 +8,7 @@ import pymorphy2
 from pylp import common
 from pylp import lp_doc
 from pylp.word_obj import WordObj
-from pylp.common import PosTag
+from pylp.common import PosTag, SyntLink
 from pylp.common import WordGender
 
 
@@ -39,6 +39,7 @@ class RuLemmatizer:
             [
                 PosTag.ADJ,
                 PosTag.ADJ_SHORT,
+                PosTag.PROPN,
                 PosTag.NOUN,
                 PosTag.ADV,
                 PosTag.PARTICIPLE,
@@ -51,6 +52,7 @@ class RuLemmatizer:
             PosTag.ADJ: 'ADJF',
             PosTag.ADJ_SHORT: 'ADJS',
             PosTag.NOUN: 'NOUN',
+            PosTag.PROPN: 'NOUN',
             PosTag.PARTICIPLE: 'PRTF',
             PosTag.PARTICIPLE_SHORT: 'PRTS',
             PosTag.ADV: 'ADVB',
@@ -118,6 +120,26 @@ class RuLemmatizer:
                 return r.word
         return pymorphy_res.normal_form
 
+    def _adjust_propn_pos_tag(self, word_obj: WordObj, parsed_results):
+        if word_obj.pos_tag == PosTag.PROPN and word_obj.synt_link in (
+            SyntLink.AMOD,
+            SyntLink.COMPOUND,
+        ):
+            print(parsed_results)
+            # if word_obj.form not in parsed_cache:
+            #     parsed_cache[word_obj.form] = self._morph.parse(word_obj.form)
+            # results = parsed_cache[word_obj.form]
+            # take the most likely
+            pos_tag = None
+            for res in parsed_results:
+                if res.tag.POS == 'PRTF':
+                    pos_tag = PosTag.PARTICIPLE
+                elif res.tag.POS == 'ADJF':
+                    pos_tag = PosTag.ADJ
+
+            if pos_tag is not None:
+                word_obj.pos_tag = pos_tag
+
     def __call__(self, doc_obj: lp_doc.Doc):
         parsed_cache = {}
 
@@ -135,6 +157,8 @@ class RuLemmatizer:
                 if word not in parsed_cache:
                     parsed_cache[word] = self._morph.parse(word)
                 results = parsed_cache[word]
+
+                self._adjust_propn_pos_tag(word_obj, results)
 
                 # TODO Can you elaborate on this?
                 if all(r.tag.POS == 'INFN' for r in results):

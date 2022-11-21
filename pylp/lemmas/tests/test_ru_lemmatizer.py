@@ -5,7 +5,7 @@ import pytest
 
 from pylp.lemmas.ru_lemmatizer import RuLemmatizer
 from pylp import lp_doc
-from pylp.common import Lang, PosTag, WordGender, WordNumber
+from pylp.common import Lang, PosTag, SyntLink, WordGender, WordNumber
 from pylp.word_obj import WordObj
 
 
@@ -81,3 +81,51 @@ def test_ru_lem5(ru_lemmatizer):
     word_fixed = doc[0][0]
     # shouldn't fix word number to SING
     assert word_fixed.number == WordNumber.PLUR
+
+
+def test_ru_lem6(ru_lemmatizer):
+    word1 = WordObj(
+        lemma='саудовский', form='Саудовской', pos_tag=PosTag.PROPN, synt_link=SyntLink.AMOD
+    )
+    word2 = WordObj(lemma='аравия', form='Аравии', pos_tag=PosTag.PROPN, synt_link=SyntLink.OBL)
+
+    doc = _make_doc_obj([[word1, word2]])
+
+    ru_lemmatizer(doc)
+    word_fixed = doc[0][0]
+    assert word_fixed.pos_tag == PosTag.ADJ
+
+
+def test_ru_lem7(ru_lemmatizer):
+    word1 = WordObj(
+        lemma='соединненный',
+        form='Соединненных',
+        pos_tag=PosTag.PROPN,
+        synt_link=SyntLink.COMPOUND,
+        number=WordNumber.SING,
+    )
+    word2 = WordObj(
+        lemma='штат',
+        form='Штатах',
+        pos_tag=PosTag.PROPN,
+        synt_link=SyntLink.COMPOUND,
+        number=WordNumber.SING,
+    )
+    word3 = WordObj(
+        lemma='америка',
+        form='Америки',
+        pos_tag=PosTag.PROPN,
+        synt_link=SyntLink.NMOD,
+        number=WordNumber.SING,
+    )
+
+    doc = _make_doc_obj([[word1, word2, word3]])
+
+    ru_lemmatizer(doc)
+    word_fixed_1 = doc[0][0]
+    assert word_fixed_1.pos_tag == PosTag.ADJ
+    assert word_fixed_1.number == WordNumber.PLUR
+
+    word_fixed_2 = doc[0][1]
+    assert word_fixed_2.pos_tag == PosTag.PROPN
+    assert word_fixed_2.number == WordNumber.PLUR
