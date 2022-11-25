@@ -183,7 +183,7 @@ class Doc:
             self.lang = lang
         self._fragments: Dict[str, FragmentType] = {}
 
-        self._ling_meta = {'model': {}, 'properties': [], 'post_processors': {'kinds': []}}
+        self._ling_meta = {'deps': {}, 'properties': [], 'post_processors': {'kinds': []}}
 
     @property
     def text(self) -> Optional[str]:
@@ -227,8 +227,8 @@ class Doc:
         for s in self._sents:
             yield s
 
-    def update_ling_model_info(self, **kwargs):
-        self._ling_meta['model'].update(kwargs)
+    def update_deps_info(self, **kwargs):
+        self._ling_meta['deps'].update(kwargs)
 
     def update_post_processors_info(self, **kwargs):
         self._ling_meta['post_processors'].update(kwargs)
