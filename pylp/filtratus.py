@@ -5,7 +5,7 @@
 import logging
 import functools
 
-from pylp.common import PosTag
+from pylp.common import PosTag, SyntLink
 from pylp.common import Lang
 from pylp.common import STOP_WORD_POS_TAGS
 
@@ -66,11 +66,15 @@ class CommonAuxFiltratus(AbcFilter):
     name = 'common_aux'
 
     def __init__(self, **kwargs):
-        self._common_aux = frozenset(['be', 'have'])
+        self._common_aux = frozenset(['be', 'have', 'быть', 'do'])
 
     def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
 
-        return word_obj.pos_tag == PosTag.AUX and word_obj.lemma in self._common_aux
+        # cop - https://universaldependencies.org/u/dep/cop.html
+        # cop is used for be
+        return (word_obj.pos_tag == PosTag.AUX and word_obj.lemma in self._common_aux) or (
+            word_obj.synt_link == SyntLink.COP
+        )
 
 
 class StopWordsFiltratus(AbcFilter):
