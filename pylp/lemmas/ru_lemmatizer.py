@@ -125,10 +125,6 @@ class RuLemmatizer:
             SyntLink.AMOD,
             SyntLink.COMPOUND,
         ):
-            print(parsed_results)
-            # if word_obj.form not in parsed_cache:
-            #     parsed_cache[word_obj.form] = self._morph.parse(word_obj.form)
-            # results = parsed_cache[word_obj.form]
             # take the most likely
             pos_tag = None
             for res in parsed_results:
