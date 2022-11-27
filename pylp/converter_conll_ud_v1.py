@@ -123,19 +123,12 @@ class ConverterConllUDV1:
 
     def _adjust_verb(self, morph_feats, word_obj: WordObj):
         if 'VerbForm' in morph_feats:
-            if morph_feats['VerbForm'] == 'Part':
+            if morph_feats['VerbForm'] in ('Ger', 'Part'):
                 if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
                     word_obj.pos_tag = common.PosTag.PARTICIPLE_SHORT
                 else:
                     word_obj.pos_tag = common.PosTag.PARTICIPLE
-            elif morph_feats['VerbForm'] in ('Ger', 'Conv'):
-                # VerbForm=Ger is used in Ontonotes for present participles
-                # grep  'VerbForm=Ger' train.conllu  | grep -i 'amod' | wc -l
-                # 2944 lines
-                # Example
-                # 62      flying  fly     VERB    VBG     VerbForm=Ger    63      amod    63:amod _
-                # 63      enemies enemy   NOUN    NNS     Number=Plur     57      obl     57:obl:off      SpaceAfter=No
-                # So actualy its wrong to set PARTICIPLE_ADVERB here
+            elif morph_feats['VerbForm'] == 'Conv':
                 word_obj.pos_tag = common.PosTag.PARTICIPLE_ADVERB
 
     def _adjust_adj(self, morph_feats, word_obj: WordObj):
