@@ -4,6 +4,7 @@ from io import StringIO
 from pylp import common
 from pylp import lp_doc
 from pylp.word_obj import WordObj
+import pylp.phrases.builder
 
 # inspired by the code from isanlp
 # https://github.com/IINemo/isanlp
@@ -27,6 +28,9 @@ class ConllFormatStreamParser:
                 sent.append(l.split('\t'))
 
 
+DEF_PHRASE_BUILDER_OPTS = pylp.phrases.builder.PhraseBuilderOpts()
+
+
 class ConverterConllUDV1:
     FORM = 1
     LEMMA = 2
@@ -34,6 +38,7 @@ class ConverterConllUDV1:
     MORPH = 5
     HEAD = 6
     DEPREL = 7
+    ENH_DEP = 8
 
     def __call__(self, text, conll_raw_text, doc: lp_doc.Doc) -> lp_doc.Doc:
         """Performs conll text parsing.
@@ -105,21 +110,48 @@ class ConverterConllUDV1:
 
         self._assign_morph_features(word_obj, morph_feats, pos_tag)
 
-        if word[self.HEAD] != '_':
-            parent_pos = int(word[self.HEAD]) - 1
-            if parent_pos != -1:
-                word_obj.parent_offs = parent_pos - pos
+        self._set_syntax(pos, word, word_obj)
+
+        return word_obj
+
+    def _set_syntax(self, pos: int, word: tuple, word_obj: WordObj):
+        # TODO what to do with modificators?
+        # flat:name
+        # nsubj:pass
+        # acl:relcl
+        # cc:preconj
+
+        head = None
+        rel = None
+        if word[self.ENH_DEP] != '_':
+            dep_vars = word[self.ENH_DEP].split('|')
+            # choose the one that can be used to make phrases later
+            # or something else but ignore conj rel
+            for var in dep_vars:
+                head_str, rel_str, *_ = var.split(':', 2)
+                if rel_str == 'conj':
+                    continue
+                temp_rel = common.SYNT_LINK_DICT[rel_str.upper()]
+                if temp_rel in DEF_PHRASE_BUILDER_OPTS.good_synt_rels:
+                    rel = temp_rel
+                    head = int(head_str)
+                    break
+                if head is None:
+                    head = int(head_str)
+                    rel = temp_rel
+
+        if head is None and word[self.HEAD] != '_':
+            head = int(word[self.HEAD])
+            rel = common.SYNT_LINK_DICT[word[self.DEPREL].split(':', 1)[0].upper()]
+
+        if head is not None and rel is not None:
+            head -= 1
+            if head != -1:
+                word_obj.parent_offs = head - pos
             else:
                 word_obj.parent_offs = 0
 
-            # TODO what to do with modificators?
-            # nsubj:pass
-            # acl:relcl
-            # cc:preconj
-            n = common.SYNT_LINK_DICT[word[self.DEPREL].split(':', 1)[0].upper()]
-            word_obj.synt_link = n
-
-        return word_obj
+            word_obj.synt_link = rel
 
     def _adjust_verb(self, morph_feats, word_obj: WordObj):
         if 'VerbForm' in morph_feats:

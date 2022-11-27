@@ -230,3 +230,67 @@ def test_with_synt():
     word2_5 = sent2[4]
     assert word2_5.parent_offs == -3
     assert word2_5.synt_link == common.SyntLink.OBL
+
+
+TEXT_4 = """
+It comes in silver and black casing and large keys make navigation easy.
+"""
+
+
+CONLLU_TEXT_WITH_SYNT_2 = """# text = It comes in silver and black casing
+1	It	it	PRON	PRP	Case=Nom|Gender=Neut|Number=Sing|Person=3|PronType=Prs	2	nsubj	2:nsubj	_
+2	comes	come	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+3	in	in	ADP	IN	_	7	case	7:case	_
+4	silver	silver	ADJ	JJ	Degree=Pos	7	amod	7:amod	_
+5	and	and	CCONJ	CC	_	6	cc	6:cc	_
+6	black	black	ADJ	JJ	Degree=Pos	4	conj	4:conj:and|7:amod	_
+7	casing	casing	NOUN	NN	Number=Sing	2	obl	2:obl:in	_
+
+"""
+
+
+def test_picking_alt_synt_link():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('5')
+    converter(TEXT_4, CONLLU_TEXT_WITH_SYNT_2, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    # 6       black   black   ADJ     JJ      Degree=Pos      4       conj    4:conj:and|7:amod       _
+    word1_6 = sent1[5]
+    assert word1_6.parent_offs == 1
+    assert word1_6.synt_link == common.SyntLink.AMOD
+
+
+TEXT_5 = "he I you"
+CONLLU_TEXT_WITH_SYNT_3 = """# text = he I you
+1	he	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	4	nsubj	4:nsubj|6:nsubj:xsubj	_
+2	I	I	PRON	PRP	Case=Nom|Number=Sing|Person=1|PronType=Prs	4	conj	4:conj:and|8:nsubj|10:nsubj:xsubj	_
+3	you	you	PRON	PRP	Case=Nom|Person=2|PronType=Prs	4	conj	4:conj	_
+
+"""
+
+
+def test_picking_alt_synt_link_2():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('6')
+
+    converter(TEXT_5, CONLLU_TEXT_WITH_SYNT_3, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    # Select the first from:
+    # 4:nsubj|6:nsubj:xsubj
+    word1_1 = sent1[0]
+    assert word1_1.parent_offs == 3
+    assert word1_1.synt_link == common.SyntLink.NSUBJ
+
+    # ignore conj
+    # 4:conj:and|8:nsubj
+    word1_2 = sent1[1]
+    assert word1_2.parent_offs == 6
+    assert word1_2.synt_link == common.SyntLink.NSUBJ
+
+    word1_3 = sent1[2]
+    assert word1_3.parent_offs == 1
+    assert word1_3.synt_link == common.SyntLink.CONJ
