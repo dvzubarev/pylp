@@ -234,7 +234,27 @@ class Attr:
 
 PREP_WHITELIST = frozenset([
     "of",
-    18370182862529888470,  # of
+    "to",
+    "in",
+    "for",
+    "on",
+    "with",
+    "by",
+    "from",
+    "about",
+    "over",
+    "на",
+    "с",
+    "к",
+    "в",
+    "для",
+    "из"
+    "об",
+    "о",
+    "про",
+    "от",
+    "за",
+    "по",
 
 ])
 # fmt: on

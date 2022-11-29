@@ -118,6 +118,16 @@ class RuInflector(Inflector):
     def __init__(self):
         self._pymorphy = pymorphy2.MorphAnalyzer()
 
+        self._case_mapping = {
+            WordCase.NOM: 'nomn',
+            WordCase.GEN: 'gent',
+            WordCase.ACC: 'accs',
+            WordCase.DAT: 'datv',
+            WordCase.INS: 'ablt',
+            WordCase.LOC: 'loct',
+            WordCase.VOC: 'voct',
+        }
+
     def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         # We can only change number of a word
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
@@ -133,10 +143,14 @@ class RuInflector(Inflector):
         if head_obj.pos_tag == PosTag.PROPN:
             phrase_words[head_pos] = phrase_words[head_pos].capitalize()
 
-    def _inflect_to_gen_case(self, word, word_obj: WordObj):
+    def _inflect_to_case(self, word, word_obj: WordObj):
         number = 'plur' if word_obj.number == WordNumber.PLUR else 'sing'
-        form = self._pymorphy_inflect(word, "NOUN", {number, 'gent'})
-        return form
+        if word_obj.case is None:
+            return None, None
+
+        case = self._case_mapping[word_obj.case]
+        form = self._pymorphy_inflect(word, "NOUN", {number, case})
+        return form, word_obj.case
 
     def _inflect_noun_noun(
         self, phrase: Phrase, head_pos, head_obj: WordObj, mod_pos, mod_obj: WordObj
@@ -147,16 +161,18 @@ class RuInflector(Inflector):
             SyntLink.NMOD,
             SyntLink.COMPOUND,
         ):
-            form = self._inflect_to_gen_case(phrase_words[mod_pos], mod_obj)
+            form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
 
-            extra = phrase.get_extra()
-            extra[mod_pos] = {Attr.CASE: WordCase.GEN}
+            if case is not None:
+                phrase.update_extra(mod_pos, {Attr.CASE: case})
         elif mod_obj.synt_link == SyntLink.NUMMOD:
             # have to inflect head word
             if head_obj.number == WordNumber.PLUR:
-                head_form = self._inflect_to_gen_case(phrase_words[head_pos], head_obj)
+                head_form, case = self._inflect_to_case(phrase_words[head_pos], head_obj)
                 if head_form is not None:
                     phrase_words[head_pos] = head_form
+                if case is not None:
+                    phrase.update_extra(mod_pos, {Attr.CASE: case})
 
         elif mod_obj.synt_link in (SyntLink.FIXED, SyntLink.FLAT, SyntLink.APPOS):
             # see test_ru_propn_inflect4 ['красивая', 'Валентина', 'Иванова']
@@ -198,14 +214,7 @@ class RuInflector(Inflector):
                 case = 'nomn'
                 extra = phrase.get_extra()[head_pos]
                 if extra is not None:
-                    case = extra.get(Attr.CASE, WordCase.NOM)
-                    if case == WordCase.NOM:
-                        case = 'nomn'
-                    elif case == WordCase.GEN:
-                        case = 'gent'
-                    else:
-                        raise RuntimeError(f"Unsupported case {case}")
-
+                    case = self._case_mapping[extra.get(Attr.CASE, WordCase.NOM)]
                 feats.add(case)
 
                 if mod_obj.pos_tag == PosTag.ADJ:

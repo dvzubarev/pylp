@@ -13,6 +13,7 @@ from pylp.common import (
     WordCase,
     Lang,
     SyntLink,
+    Attr,
 )
 
 from pylp.word_obj import WordObj
@@ -112,7 +113,12 @@ def test_simple_noun_inflect():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM),
-            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC, synt_link=SyntLink.NMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.MASC,
+                synt_link=SyntLink.NMOD,
+                case=WordCase.GEN,
+            ),
         ]
     )
 
@@ -131,7 +137,12 @@ def test_simple_noun_inflect_2():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM),
-            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.NEUT, synt_link=SyntLink.COMPOUND),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.NEUT,
+                synt_link=SyntLink.COMPOUND,
+                case=WordCase.GEN,
+            ),
         ]
     )
 
@@ -204,7 +215,7 @@ def test_UN_inflect():
     p = Phrase()
     p.set_head_pos(0)
     p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['организация', 'объединить', 'нация'])
+    p.set_words(['организация', 'объединённый', 'нация'])
     p.set_deps([0, 1, -2])
     p.set_extra([{}] * len(p.get_sent_pos_list()))
 
@@ -222,6 +233,7 @@ def test_UN_inflect():
                 number=WordNumber.PLUR,
                 gender=WordGender.FEM,
                 synt_link=SyntLink.NMOD,
+                case=WordCase.GEN,
             ),
         ]
     )
@@ -304,12 +316,66 @@ def test_inflect_ru_phrase3():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM, number=WordNumber.PLUR),
-            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC, synt_link=SyntLink.NMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.MASC,
+                synt_link=SyntLink.NMOD,
+                case=WordCase.GEN,
+            ),
         ]
     )
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words(False) == ['раковины', 'стромбуса']
+
+
+def test_inflect_ru_with_prep_1():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['путь', 'вершина'])
+    p.set_deps([0, -1])
+    p.set_extra([{}, {Attr.PREP_WHITE_LIST: (1, 'к', 1234)}])
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.FEM,
+                synt_link=SyntLink.NMOD,
+                case=WordCase.DAT,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['путь', 'к', 'вершине']
+
+
+def test_inflect_ru_with_prep_2():
+    p = Phrase()
+    p.set_head_pos(0)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['путь', 'красивый', 'вершина'])
+    p.set_deps([0, 1, -2])
+    p.set_extra([{}, {}, {Attr.PREP_WHITE_LIST: (2, 'к', 1234)}])
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC),
+            WordObj(pos_tag=PosTag.ADJ, number=WordNumber.PLUR, case=WordCase.DAT),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                number=WordNumber.PLUR,
+                synt_link=SyntLink.NMOD,
+                case=WordCase.DAT,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['путь', 'к', 'красивым', 'вершинам']
 
 
 def test_inflect_ru_phrase4():
@@ -341,8 +407,13 @@ def test_inflect_ru_nummod_1():
 
     sent = lp_doc.Sent(
         [
-            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.SING, synt_link=SyntLink.NUMMOD),
-            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                number=WordNumber.SING,
+                synt_link=SyntLink.NUMMOD,
+                case=WordCase.ACC,
+            ),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR, case=WordCase.GEN),
         ]
     )
 
@@ -360,8 +431,8 @@ def test_inflect_ru_nummod_2():
 
     sent = lp_doc.Sent(
         [
-            WordObj(pos_tag=PosTag.NOUN, synt_link=SyntLink.NUMMOD),
-            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.SING),
+            WordObj(pos_tag=PosTag.NOUN, synt_link=SyntLink.NUMMOD, case=WordCase.NOM),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.SING, case=WordCase.NOM),
         ]
     )
 
@@ -369,7 +440,7 @@ def test_inflect_ru_nummod_2():
     assert p.get_words(False) == ['один', 'человек']
 
 
-def test_inflect_ru_nummod_2():
+def test_inflect_ru_nummod_3():
     p = Phrase()
     p.set_head_pos(1)
     p.set_sent_pos_list([0, 1])
@@ -380,12 +451,37 @@ def test_inflect_ru_nummod_2():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NUM, synt_link=SyntLink.NUMMOD),
-            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR, case=WordCase.GEN),
         ]
     )
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words(False) == ['двое', 'людей']
+
+
+def test_inflect_ru_nummod_4():
+    p = Phrase()
+    p.set_head_pos(2)
+    p.set_sent_pos_list([0, 1, 2])
+    p.set_words(['двое', 'красивый', 'человек'])
+    p.set_deps([2, 1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NUM, synt_link=SyntLink.NUMMOD),
+            WordObj(
+                pos_tag=PosTag.ADJ,
+                synt_link=SyntLink.AMOD,
+                number=WordNumber.PLUR,
+                case=WordCase.GEN,
+            ),
+            WordObj(pos_tag=PosTag.NOUN, number=WordNumber.PLUR, case=WordCase.GEN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words(False) == ['двое', 'красивых', 'людей']
 
 
 def test_ru_propn_inflect1():
@@ -417,7 +513,7 @@ def test_ru_propn_inflect2():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN),
-            WordObj(pos_tag=PosTag.PROPN, synt_link=SyntLink.NMOD),
+            WordObj(pos_tag=PosTag.PROPN, synt_link=SyntLink.NMOD, case=WordCase.GEN),
         ]
     )
 

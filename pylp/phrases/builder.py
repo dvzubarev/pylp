@@ -25,8 +25,8 @@ def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: lp_doc.Sent
     p.set_words([sent[p].lemma for p in p.get_sent_pos_list()])
     p.set_deps([1, 0] if mod_on_left else [0, -1])
 
-    mod_extra = sent[mod_pos].extra
-    head_extra = sent[head_pos].extra
+    mod_extra = copy.copy(sent[mod_pos].extra)
+    head_extra = copy.copy(sent[head_pos].extra)
     p.set_extra([mod_extra, head_extra] if mod_pos < head_pos else [head_extra, mod_extra])
 
     p.set_id_holder(
@@ -124,7 +124,8 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent
     new_phrase.set_extra(
         head_phrase.get_extra()[:insert_pos]
         + other_phrase.get_extra()
-        + head_phrase.get_extra()[insert_pos:]
+        + head_phrase.get_extra()[insert_pos:],
+        need_copy=True,
     )
 
     new_phrase.set_id_holder(
@@ -453,7 +454,7 @@ class PhraseBuilder(BasicPhraseBuilder):
         return super()._test_pair(mod_word_obj, mod_pos, sent, mods_index)
 
     def _test_nmod(self, word_obj: WordObj):
-        """Return true if this nmod without prepositions or with 'of' prep"""
+        """Return true if this nmod without prepositions or with whitelisted preposition"""
         extra = word_obj.extra
         return lp.Attr.PREP_WHITE_LIST in extra or lp.Attr.PREP_MOD not in extra
 

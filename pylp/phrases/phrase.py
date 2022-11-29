@@ -83,7 +83,7 @@ class Phrase:
             self._words = [word_obj.lemma]
 
             self._deps: List[int] = [0]
-            self._extra = [word_obj.extra]
+            self._extra = [copy.copy(word_obj.extra)]
 
             self._id_holder = PhraseId(word_obj)
         else:
@@ -112,11 +112,19 @@ class Phrase:
     def get_sent_pos_list(self):
         return self._sent_pos_list
 
-    def set_extra(self, extra):
-        self._extra = extra
+    def set_extra(self, extra, need_copy=False):
+        if need_copy:
+            self._extra = [copy.copy(e) for e in extra]
+        else:
+            self._extra = extra
 
     def get_extra(self):
         return self._extra
+
+    def update_extra(self, pos, info):
+        if self._extra[pos] is None:
+            self._extra[pos] = {}
+        self._extra[pos].update(info)
 
     def set_words(self, words):
         self._words = words

@@ -285,6 +285,22 @@ def test_phrases_with_prepositions():
     assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']
 
 
+def test_phrases_with_prepositions_1():
+    words = [
+        _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('к', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('h2', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [_p2str(p, with_phrases=True) for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 1
+    assert str_phrases == ['h1_к_h2']
+
+
 def test_phrase_id():
     words = [
         _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
