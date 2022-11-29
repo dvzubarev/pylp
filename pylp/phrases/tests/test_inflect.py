@@ -521,6 +521,25 @@ def test_simple_en_pres_part_inflect_3():
     assert p.get_words(False) == ['canning', 'food']
 
 
+def test_simple_en_pres_part_inflect_4():
+    p = Phrase()
+    p.set_head_pos(1)
+    p.set_sent_pos_list([0, 1])
+    p.set_words(['fielding', 'side'])
+    p.set_deps([1, 0])
+    p.set_extra([{}] * len(p.get_sent_pos_list()))
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.PARTICIPLE),
+            WordObj(pos_tag=PosTag.NOUN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.EN)
+    assert p.get_words(False) == ['fielding', 'side']
+
+
 def test_simple_en_past_part_inflect_1():
     p = Phrase()
     p.set_head_pos(1)

@@ -422,7 +422,7 @@ class EnInflector(Inflector):
                         form = current_lemma[:-2] + 'ying'
                     elif current_lemma.endswith('e'):
                         form = current_lemma[:-1] + 'ing'
-                    else:
+                    elif not current_lemma.endswith('ing'):
                         form = current_lemma + 'ing'
             elif mod_obj.pos_tag == PosTag.PARTICIPLE and mod_obj.tense == WordTense.PAST:
                 # check exceptions
@@ -434,7 +434,7 @@ class EnInflector(Inflector):
                     # inflect by rules
                     if current_lemma.endswith('e'):
                         form = current_lemma + 'd'
-                    else:
+                    elif not current_lemma.endswith('ed'):
                         form = current_lemma + 'ed'
 
         if form is not None:
