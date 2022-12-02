@@ -407,6 +407,23 @@ class PhraseBuilder(BasicPhraseBuilder):
     def opts(self) -> PhraseBuilderOpts:
         return self._opts
 
+    def _restore_prep_str(self, prep_pos: int, prep_obj: WordObj, sent: lp_doc.Sent):
+        beg = max(0, prep_pos - 2)
+        end = min(len(sent), prep_pos + 3)
+
+        prep_str = prep_obj.lemma
+        for i in range(beg, end):
+            word_obj = sent[i]
+            if (
+                word_obj.parent_offs
+                and word_obj.parent_offs + i == prep_pos
+                and word_obj.synt_link == lp.SyntLink.FIXED
+            ):
+                if i < prep_pos:
+                    return f'{word_obj.lemma} {prep_str}'
+                return f'{prep_str} {word_obj.lemma}'
+        return prep_str
+
     def _create_preps_info(self, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         preps = []
         whitelisted_preps = []
@@ -420,12 +437,12 @@ class PhraseBuilder(BasicPhraseBuilder):
             mod_obj = sent[mod_pos]
 
             if mod_obj.pos_tag == lp.PosTag.ADP and mod_obj.synt_link == lp.SyntLink.CASE:
-                w = mod_obj.lemma
+                prep_str = self._restore_prep_str(mod_pos, mod_obj, sent)
                 word_id = mod_obj.word_id
-                if w in self.opts().whitelisted_preps:
-                    whitelisted_preps.append((mod_pos, w, word_id))
+                if prep_str in self.opts().whitelisted_preps:
+                    whitelisted_preps.append((mod_pos, prep_str, word_id))
                 else:
-                    preps.append((mod_pos, w, word_id))
+                    preps.append((mod_pos, prep_str, word_id))
 
         extra_dict = {}
         if whitelisted_preps:

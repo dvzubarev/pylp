@@ -324,6 +324,20 @@ def test_phrases_with_prepositions_2():
     assert str_phrases == ['r h1', 'r h1 от h2', 'r от h2']
 
 
+def test_phrases_with_prepositions_3():
+    words = [
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('в', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('качество', -1, lp.PosTag.NOUN, lp.SyntLink.FIXED),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    assert len(phrases) == 0
+
+
 def test_phrase_id():
     words = [
         _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
