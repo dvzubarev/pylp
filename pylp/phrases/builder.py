@@ -446,13 +446,15 @@ class PhraseBuilder(BasicPhraseBuilder):
 
         extra_dict = {}
         if whitelisted_preps:
+            selected_prep = whitelisted_preps[-1]
             if len(whitelisted_preps) > 1:
-                # TODO chose the closest one
                 logging.warning(
-                    "more than one whitelisted preps: %s choosing only the first one",
+                    "more than one whitelisted preps: %s choosing the closest to the word: %s",
                     whitelisted_preps,
+                    sent[pos],
                 )
-            extra_dict[lp.Attr.PREP_WHITE_LIST] = whitelisted_preps[0]
+
+            extra_dict[lp.Attr.PREP_WHITE_LIST] = selected_prep
         if preps:
             extra_dict[lp.Attr.PREP_MOD] = preps
 
