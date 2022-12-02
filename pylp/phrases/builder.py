@@ -61,19 +61,26 @@ def _is_new_phrase_valid(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc
 
 
 def _create_repr_modifiers(other_phrase: Phrase, sent: lp_doc.Sent):
+
     other_repr_modifiers = copy.copy(other_phrase.get_repr_modifiers())
-
     other_head_modifier = other_phrase.get_head_modifier()
-    if other_head_modifier.prep_modifier is not None:
-        head_pos = other_phrase.get_head_pos()
-        prep_str = other_head_modifier.prep_modifier[1]
-        repr_enh = ReprEnhancer(-head_pos, ReprEnhType.ADD_WORD, prep_str)
+    head_pos = other_phrase.get_head_pos()
 
+    def _add_repr_mod(repr_enh):
         enh_list = other_repr_modifiers[head_pos]
         if enh_list is None:
             enh_list = []
             other_repr_modifiers[head_pos] = enh_list
         enh_list.append(repr_enh)
+
+    if other_head_modifier.prep_modifier is not None:
+        prep_str = other_head_modifier.prep_modifier[1]
+        repr_enh = ReprEnhancer(-head_pos, ReprEnhType.ADD_WORD, prep_str)
+        _add_repr_mod(repr_enh)
+
+    if other_head_modifier.repr_mod_suffix is not None:
+        repr_enh = ReprEnhancer(0, ReprEnhType.ADD_SUFFIX, other_head_modifier.repr_mod_suffix)
+        _add_repr_mod(repr_enh)
 
     return other_repr_modifiers
 
@@ -460,9 +467,26 @@ class PhraseBuilder(BasicPhraseBuilder):
 
         return extra_dict
 
+    def _create_repr_modifiers_info(self, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
+        modificators = mods_index[pos]
+        if modificators is None:
+            return {}
+
+        for mod_pos in modificators:
+            mod_obj = sent[mod_pos]
+            if (
+                mod_obj.pos_tag == lp.PosTag.PART
+                and mod_obj.synt_link == lp.SyntLink.CASE
+                and mod_obj.lemma in ("'s", "'")
+            ):
+                return {lp.Attr.REPR_MOD_SUFFIX: mod_obj.lemma}
+
+        return {}
+
     def _create_extra(self, sent: lp_doc.Sent, mods_index: ModsIndexType):
         for pos, word_obj in enumerate(sent):
             extra = self._create_preps_info(pos, sent, mods_index)
+            extra.update(self._create_repr_modifiers_info(pos, sent, mods_index))
             if extra:
                 word_obj.extra.update(extra)
 

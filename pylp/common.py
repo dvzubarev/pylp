@@ -228,9 +228,9 @@ class Attr:
     LENGTH           = 'S'
     ROLES            = 'r'
     RELS             = 'e'
-    PREP_MOD         = 'M'
-    #TEMP
-    PREP_WHITE_LIST  = 'W'
+    PREP_MOD         = 'PM'
+    PREP_WHITE_LIST  = 'Wh'
+    REPR_MOD_SUFFIX  = 'ReSu'
 
 PREP_WHITELIST = frozenset([
     "of",

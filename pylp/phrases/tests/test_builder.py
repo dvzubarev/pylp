@@ -338,6 +338,40 @@ def test_phrases_with_prepositions_3():
     assert len(phrases) == 0
 
 
+def test_phrases_with_repr_mod_suffix_1():
+    words = [
+        _mkw('good', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('kid', 2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw("'s", -1, lp.PosTag.PART, lp.SyntLink.CASE),
+        _mkw('school', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['good kid', "good kid's school", "kid's school"]
+
+
+def test_phrases_with_repr_mod_suffix_2():
+    words = [
+        _mkw('Wilson', 3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw("'s", -1, lp.PosTag.PART, lp.SyntLink.CASE),
+        _mkw('old', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('conviction', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ["Wilson's conviction", "Wilson's old conviction", 'old conviction']
+
+
 def test_phrase_id():
     words = [
         _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),

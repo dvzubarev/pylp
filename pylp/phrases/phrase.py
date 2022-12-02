@@ -75,16 +75,20 @@ class PhraseId:
 
 
 class HeadModifier:
-    def __init__(self, prep_modifier: Tuple | None = None) -> None:
+    def __init__(
+        self, prep_modifier: Tuple | None = None, repr_mod_suffix: str | None = None
+    ) -> None:
         self.prep_modifier = prep_modifier
+        self.repr_mod_suffix = repr_mod_suffix
 
     def to_dict(self):
-        return {'prep_mod': self.prep_modifier}
+        return {'prep_mod': self.prep_modifier, 'repr_mod_suffix': self.repr_mod_suffix}
 
     @classmethod
     def from_dict(cls, dic):
         hm = cls()
         hm.prep_modifier = dic['prep_mod']
+        hm.repr_mod_suffix = dic['repr_mod_suffix']
 
 
 class ReprEnhType(Enum):
@@ -133,6 +137,7 @@ class Phrase:
             raise RuntimeError("Unindentified word")
 
         prep_mod = word_obj.extra.get(lp.Attr.PREP_WHITE_LIST)
+        repr_mod_suffix = word_obj.extra.get(lp.Attr.REPR_MOD_SUFFIX)
         return cls(
             size=1,
             head_pos=0,
@@ -140,7 +145,7 @@ class Phrase:
             words=[word_obj.lemma],
             deps=[0],
             id_holder=PhraseId(word_obj),
-            head_modifier=HeadModifier(prep_modifier=prep_mod),
+            head_modifier=HeadModifier(prep_modifier=prep_mod, repr_mod_suffix=repr_mod_suffix),
             repr_modifiers=[None],
         )
 
@@ -262,6 +267,4 @@ class Phrase:
         return f"Phrase(id={self.get_id()}, words={self.get_words()})"
 
     def __str__(self):
-        return (
-            f"Id:{self.get_id()}, words: {self.get_words()}, positions: {self.get_sent_pos_list()}"
-        )
+        return f"Id:{self.get_id()}, str_repr: {self.get_str_repr()}, positions: {self.get_sent_pos_list()}"
