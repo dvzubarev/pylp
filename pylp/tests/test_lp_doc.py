@@ -17,12 +17,8 @@ def test_filter_words():
         WordObj(lemma='p', pos_tag=PosTag.NOUN),
         WordObj(lemma='o', pos_tag=PosTag.NUM),
     ]
-    phrase1 = Phrase()
-    phrase1.set_sent_pos_list([0, 2])
-    phrase1.set_words(['t', 'p'])
-    phrase2 = Phrase()
-    phrase2.set_sent_pos_list([2, 3])
-    phrase1.set_words(['p', 'o'])
+    phrase1 = Phrase(sent_pos_list=[0, 2], words=['t', 'p'])
+    phrase2 = Phrase(sent_pos_list=[2, 3], words=['p', 'o'])
 
     phrases = [phrase1, phrase2]
 

@@ -9,7 +9,6 @@ from typing import List, Mapping, Optional
 import pymorphy2
 
 from pylp.common import (
-    Attr,
     Lang,
     PosTag,
     WordGender,
@@ -31,6 +30,9 @@ class Inflector:
 
     def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
         raise NotImplementedError("inflect pair is not implemented")
+
+    def inflect_phrase(self, phrase: Phrase, sent: lp_doc.Sent):
+        raise NotImplementedError("inflect phrase is not implemented")
 
 
 class VerbExcpForms:
@@ -71,37 +73,49 @@ def inflect_phrase(phrase: Phrase, sent: lp_doc.Sent, text_lang):
 
 
 def inflect_ru_phrase(phrase: Phrase, sent: lp_doc.Sent):
-    _inflect_mods_of_head(phrase, sent, phrase.get_head_pos(), inflector=_get_ru_inflector())
+    inflector = _get_ru_inflector()
+    inflector.inflect_phrase(phrase, sent)
 
 
 def inflect_en_phrase(phrase: Phrase, sent: lp_doc.Sent):
-    _inflect_mods_of_head(phrase, sent, phrase.get_head_pos(), inflector=_get_en_inflector())
+    inflector = _get_en_inflector()
+    inflector.inflect_phrase(phrase, sent)
 
 
 # Implementation
 
 
-def _inflect_mods_of_head(
-    phrase: Phrase,
-    sent: lp_doc.Sent,
-    head_pos,
-    inflector: Inflector,
-    inflected=None,
-):
-    if inflected is None:
-        inflected = [False] * phrase.size()
+class BaseInflector(Inflector):
+    def __init__(self) -> None:
+        super().__init__()
+        self._inflected = []
 
-    if not inflected[head_pos]:
-        inflector.inflect_head(phrase, sent, head_pos)
-        inflected[head_pos] = True
+    def _reset(self):
+        self._inflected = []
 
-    for mod_pos, l in enumerate(phrase.get_deps()):
-        if not inflected[mod_pos] and l and mod_pos + l == head_pos:
-            # this is modificator
-            inflector.inflect_pair(phrase, sent, head_pos, mod_pos)
-            inflected[mod_pos] = True
-            # recursively inflect modificators of inflected modificator
-            _inflect_mods_of_head(phrase, sent, mod_pos, inflector, inflected)
+    def _init(self, phrase: Phrase, sent: lp_doc.Sent):
+        self._inflected = [False] * phrase.size_with_preps()
+
+    def inflect_phrase(self, phrase: Phrase, sent: lp_doc.Sent):
+        try:
+            self._init(phrase, sent)
+            self._inflect_phrase_impl(phrase, sent, phrase.get_head_pos())
+
+        finally:
+            self._reset()
+
+    def _inflect_phrase_impl(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
+        if not self._inflected[head_pos]:
+            self.inflect_head(phrase, sent, head_pos)
+            self._inflected[head_pos] = True
+
+        for mod_pos, l in enumerate(phrase.get_deps()):
+            if not self._inflected[mod_pos] and l and mod_pos + l == head_pos:
+                # this is modificator
+                self.inflect_pair(phrase, sent, head_pos, mod_pos)
+                self._inflected[mod_pos] = True
+                # recursively inflect modificators of inflected modificator
+                self._inflect_phrase_impl(phrase, sent, mod_pos)
 
 
 RU_INFLECTOR = None
@@ -114,10 +128,13 @@ def _get_ru_inflector():
     return RU_INFLECTOR
 
 
-class RuInflector(Inflector):
+class RuInflector(BaseInflector):
     def __init__(self):
+        super().__init__()
+
         self._pymorphy = pymorphy2.MorphAnalyzer()
 
+        self._cases: List[WordCase] = []
         self._case_mapping = {
             WordCase.NOM: 'nomn',
             WordCase.GEN: 'gent',
@@ -128,11 +145,19 @@ class RuInflector(Inflector):
             WordCase.VOC: 'voct',
         }
 
+    def _reset(self):
+        super()._reset()
+        self._cases = []
+
+    def _init(self, phrase: Phrase, sent: lp_doc.Sent):
+        super()._init(phrase, sent)
+        self._cases = [WordCase.NOM] * phrase.size_with_preps()
+
     def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         # We can only change number of a word
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
         head_obj = sent[head_sent_pos]
-        phrase_words = phrase.get_words(False)
+        phrase_words = phrase.get_words()
 
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
             if head_obj.number == WordNumber.PLUR:
@@ -155,7 +180,7 @@ class RuInflector(Inflector):
     def _inflect_noun_noun(
         self, phrase: Phrase, head_pos, head_obj: WordObj, mod_pos, mod_obj: WordObj
     ):
-        phrase_words = phrase.get_words(False)
+        phrase_words = phrase.get_words()
         form = None
         if mod_obj.synt_link in (
             SyntLink.NMOD,
@@ -164,7 +189,7 @@ class RuInflector(Inflector):
             form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
 
             if case is not None:
-                phrase.update_extra(mod_pos, {Attr.CASE: case})
+                self._cases[mod_pos] = case
         elif mod_obj.synt_link == SyntLink.NUMMOD:
             # have to inflect head word
             if head_obj.number == WordNumber.PLUR:
@@ -172,7 +197,7 @@ class RuInflector(Inflector):
                 if head_form is not None:
                     phrase_words[head_pos] = head_form
                 if case is not None:
-                    phrase.update_extra(mod_pos, {Attr.CASE: case})
+                    self._cases[head_pos] = case
 
         elif mod_obj.synt_link in (SyntLink.FIXED, SyntLink.FLAT, SyntLink.APPOS):
             # see test_ru_propn_inflect4 ['красивая', 'Валентина', 'Иванова']
@@ -195,7 +220,7 @@ class RuInflector(Inflector):
         mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
         mod_obj = sent[mod_sent_pos]
 
-        phrase_words = phrase.get_words(False)
+        phrase_words = phrase.get_words()
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
 
             if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN, PosTag.NUM):
@@ -211,10 +236,7 @@ class RuInflector(Inflector):
                     if gender is not None:
                         feats.add(gender)
 
-                case = 'nomn'
-                extra = phrase.get_extra()[head_pos]
-                if extra is not None:
-                    case = self._case_mapping[extra.get(Attr.CASE, WordCase.NOM)]
+                case = self._case_mapping[self._cases[head_pos]]
                 feats.add(case)
 
                 if mod_obj.pos_tag == PosTag.ADJ:
@@ -347,8 +369,9 @@ EN_ALREADY_PLUR = frozenset(
 )
 
 
-class EnInflector(Inflector):
+class EnInflector(BaseInflector):
     def __init__(self):
+        super().__init__()
         p = importlib.resources.files('pylp.phrases.data').joinpath('en_lemma_exc.json.gz')
         with p.open('rb') as bf:
             gf = gzip.GzipFile(fileobj=bf)
@@ -388,7 +411,7 @@ class EnInflector(Inflector):
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
         head_obj = sent[head_sent_pos]
 
-        phrase_words = phrase.get_words(False)
+        phrase_words = phrase.get_words()
         if head_obj.number == WordNumber.PLUR:
             form = self._inflect_plural(phrase_words[head_pos])
             if form is not None:
@@ -403,7 +426,7 @@ class EnInflector(Inflector):
         mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
         mod_obj = sent[mod_sent_pos]
 
-        phrase_words = phrase.get_words(False)
+        phrase_words = phrase.get_words()
         current_lemma = phrase_words[mod_pos]
         form = None
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):

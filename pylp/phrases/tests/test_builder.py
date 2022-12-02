@@ -9,7 +9,6 @@ from pylp.phrases.builder import (
     BasicPhraseBuilder,
     PhraseBuilder,
     make_new_phrase,
-    make_2word_phrase,
 )
 
 import pylp.common as lp
@@ -60,8 +59,8 @@ def _create_complex_sent():
     return lp_doc.Sent(words)
 
 
-def _p2str(phrase, with_phrases=False):
-    return '_'.join(phrase.get_words(with_phrases))
+def _p2str(phrase):
+    return '_'.join(phrase.get_words())
 
 
 def test_phrases_builder():
@@ -180,8 +179,8 @@ def test_multiple_right_mods():
 def test_phrase_merging1():
     sent = lp_doc.Sent([_mkw('m1', 1), _mkw('r', 0), _mkw('m2', 1), _mkw('h1', -2)])
 
-    root = Phrase(1, sent[1])
-    mod1 = Phrase(0, sent[0])
+    root = Phrase.from_word(1, sent[1])
+    mod1 = Phrase.from_word(0, sent[0])
 
     root = make_new_phrase(root, mod1, sent, set())
     assert root is not None
@@ -191,7 +190,7 @@ def test_phrase_merging1():
 
     root_m1_r = copy.deepcopy(root)
 
-    head1 = Phrase(3, sent[3])
+    head1 = Phrase.from_word(3, sent[3])
     root = make_new_phrase(root, head1, sent, set())
     assert root is not None
     assert len(root.get_words()) == 3
@@ -199,7 +198,7 @@ def test_phrase_merging1():
     assert root.get_deps() == [1, 0, -1]
 
     root = copy.deepcopy(root_m1_r)
-    mod2 = Phrase(2, sent[2])
+    mod2 = Phrase.from_word(2, sent[2])
     head1 = make_new_phrase(head1, mod2, sent, set())
     assert head1 is not None
     root = make_new_phrase(root, head1, sent, set())
@@ -212,14 +211,15 @@ def test_phrase_merging1():
 def test_phrase_merging2():
     sent = lp_doc.Sent([_mkw('r', 0), _mkw('m1', 1), _mkw('h1', -2), _mkw('h2', -3)])
 
-    root = Phrase(0, sent[0])
-    mod1 = Phrase(1, sent[1])
-    h1 = Phrase(2, sent[2])
-    h2 = Phrase(3, sent[3])
-    root = make_2word_phrase(root, h2, sent)
+    root = Phrase.from_word(0, sent[0])
+    mod1 = Phrase.from_word(1, sent[1])
+    h1 = Phrase.from_word(2, sent[2])
+    h2 = Phrase.from_word(3, sent[3])
+    root = make_new_phrase(root, h2, sent, set())
+    assert root is not None
     assert root.get_words() == ['r', 'h2']
     assert root.get_deps() == [0, -1]
-    mod = make_2word_phrase(h1, mod1, sent)
+    mod = make_new_phrase(h1, mod1, sent, set())
     root = make_new_phrase(root, mod, sent, set())
     assert root is not None
     assert len(root.get_words()) == 4
@@ -229,10 +229,11 @@ def test_phrase_merging2():
 
 def test_phrase_merging3():
     sent = lp_doc.Sent([_mkw('m1', 2), _mkw('m2', 1), _mkw('r', 0)])
-    root = Phrase(2, sent[2])
-    mod1 = Phrase(0, sent[0])
-    mod2 = Phrase(1, sent[1])
-    root = make_2word_phrase(root, mod1, sent)
+    root = Phrase.from_word(2, sent[2])
+    mod1 = Phrase.from_word(0, sent[0])
+    mod2 = Phrase.from_word(1, sent[1])
+    root = make_new_phrase(root, mod1, sent, set())
+    assert root is not None
     assert root.get_head_pos() == 1
     root = make_new_phrase(root, mod2, sent, set())
     assert root is not None
@@ -267,6 +268,11 @@ def test_full_phrase_builder():
     assert len(phrases) == 3
     assert str_phrases == ['h1_h2', 'm1_h1', 'm1_h1_h2']
 
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['h1 h2', 'm1 h1', 'm1 h1 h2']
+
 
 def test_phrases_with_prepositions():
     words = [
@@ -279,10 +285,10 @@ def test_phrases_with_prepositions():
 
     phrase_builder = PhraseBuilder(MaxN=4)
     phrases = phrase_builder.build_phrases_for_sent(sent)
-    str_phrases = [_p2str(p, with_phrases=True) for p in phrases]
+    str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
     assert len(phrases) == 3
-    assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']
+    assert str_phrases == ['h1 of h2', 'h1 of m1 h2', 'm1 h2']
 
 
 def test_phrases_with_prepositions_1():
@@ -295,10 +301,27 @@ def test_phrases_with_prepositions_1():
 
     phrase_builder = PhraseBuilder(MaxN=4)
     phrases = phrase_builder.build_phrases_for_sent(sent)
-    str_phrases = [_p2str(p, with_phrases=True) for p in phrases]
+    str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
     assert len(phrases) == 1
-    assert str_phrases == ['h1_к_h2']
+    assert str_phrases == ['h1 к h2']
+
+
+def test_phrases_with_prepositions_2():
+    words = [
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('h1', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('от', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['r h1', 'r h1 от h2', 'r от h2']
 
 
 def test_phrase_id():

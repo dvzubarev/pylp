@@ -3,7 +3,7 @@
 
 
 from pylp.phrases.inflect import inflect_ru_phrase, inflect_phrase
-from pylp.phrases.builder import Phrase
+from pylp.phrases.phrase import Phrase, HeadModifier
 from pylp.common import (
     PosTag,
     WordGender,
@@ -13,7 +13,6 @@ from pylp.common import (
     WordCase,
     Lang,
     SyntLink,
-    Attr,
 )
 
 from pylp.word_obj import WordObj
@@ -21,12 +20,7 @@ from pylp import lp_doc
 
 
 def test_simple_adj_inflect():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['красивый', 'картина'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['красивый', 'картина'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -36,16 +30,11 @@ def test_simple_adj_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['красивая', 'картина']
+    assert p.get_words() == ['красивая', 'картина']
 
 
 def test_simple_participle_inflect():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['разорвать', 'полотно'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['разорвать', 'полотно'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -55,21 +44,16 @@ def test_simple_participle_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['разорванное', 'полотно']
+    assert p.get_words() == ['разорванное', 'полотно']
 
-    p.set_words(['разорванный', 'полотно'])
+    p._words = ['разорванный', 'полотно']
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['разорванное', 'полотно']
+    assert p.get_words() == ['разорванное', 'полотно']
 
 
 def test_simple_participle_inflect2():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['думать', 'голова'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['думать', 'голова'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -79,16 +63,16 @@ def test_simple_participle_inflect2():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['думающая', 'голова']
+    assert p.get_words() == ['думающая', 'голова']
 
 
 def test_participle_inflect3():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['усилить', 'половой', 'производительность'])
-    p.set_deps([2, 1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2,
+        sent_pos_list=[0, 1, 2],
+        words=['усилить', 'половой', 'производительность'],
+        deps=[2, 1, 0],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -99,16 +83,11 @@ def test_participle_inflect3():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['усиленная', 'половая', 'производительность']
+    assert p.get_words() == ['усиленная', 'половая', 'производительность']
 
 
 def test_simple_noun_inflect():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['шляпа', 'капитан'])
-    p.set_deps([0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['шляпа', 'капитан'], deps=[0, -1])
 
     sent = lp_doc.Sent(
         [
@@ -123,16 +102,11 @@ def test_simple_noun_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['шляпа', 'капитана']
+    assert p.get_words() == ['шляпа', 'капитана']
 
 
 def test_simple_noun_inflect_2():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['точка', 'зрение'])
-    p.set_deps([0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['точка', 'зрение'], deps=[0, -1])
 
     sent = lp_doc.Sent(
         [
@@ -147,16 +121,11 @@ def test_simple_noun_inflect_2():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['точка', 'зрения']
+    assert p.get_words() == ['точка', 'зрения']
 
 
 def test_plural_inflect():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['острый', 'ножницы'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['острый', 'ножницы'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -166,16 +135,11 @@ def test_plural_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['острые', 'ножницы']
+    assert p.get_words() == ['острые', 'ножницы']
 
 
 def test_plural_inflect2():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['красивый', 'пейзаж'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['красивый', 'пейзаж'], deps=[1, 0])
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.ADJ, number=WordNumber.PLUR),
@@ -184,16 +148,11 @@ def test_plural_inflect2():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['красивые', 'пейзажи']
+    assert p.get_words() == ['красивые', 'пейзажи']
 
 
 def test_plural_inflect3():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['вооружённый', 'сила'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['вооружённый', 'сила'], deps=[1, 0])
     sent = lp_doc.Sent(
         [
             WordObj(
@@ -208,16 +167,16 @@ def test_plural_inflect3():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['вооружённые', 'силы']
+    assert p.get_words() == ['вооружённые', 'силы']
 
 
 def test_UN_inflect():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['организация', 'объединённый', 'нация'])
-    p.set_deps([0, 1, -2])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['организация', 'объединённый', 'нация'],
+        deps=[0, 1, -2],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -239,16 +198,16 @@ def test_UN_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['организация', 'объединённых', 'наций']
+    assert p.get_words() == ['организация', 'объединённых', 'наций']
 
 
 def test_3phrase_inflect():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['результат', 'химический', 'реакция'])
-    p.set_deps([0, 1, -2])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['результат', 'химический', 'реакция'],
+        deps=[0, 1, -2],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -264,16 +223,11 @@ def test_3phrase_inflect():
     )
 
     inflect_ru_phrase(p, sent)
-    assert p.get_words(False) == ['результат', 'химической', 'реакции']
+    assert p.get_words() == ['результат', 'химической', 'реакции']
 
 
-def test_inflect_phrase():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['красивый', 'картина'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+def test_inflect_phrase_with_wrong_doc_lang():
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['красивый', 'картина'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -283,16 +237,13 @@ def test_inflect_phrase():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['красивая', 'картина']
+    assert p.get_words() == ['красивая', 'картина']
 
 
 def test_inflect_ru_phrase_with_eng():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['народнолатинский', 'pernula'])
-    p.set_deps([1, None])
-    p.set_extra([None] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=1, sent_pos_list=[0, 1], words=['народнолатинский', 'pernula'], deps=[1, None]
+    )
 
     sent = lp_doc.Sent(
         [
@@ -302,16 +253,11 @@ def test_inflect_ru_phrase_with_eng():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['народнолатинский', 'pernula']
+    assert p.get_words() == ['народнолатинский', 'pernula']
 
 
 def test_inflect_ru_phrase3():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['раковина', 'стромбус'])
-    p.set_deps([0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['раковина', 'стромбус'], deps=[0, -1])
 
     sent = lp_doc.Sent(
         [
@@ -326,20 +272,21 @@ def test_inflect_ru_phrase3():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['раковины', 'стромбуса']
+    assert p.get_words() == ['раковины', 'стромбуса']
 
 
 def test_inflect_ru_with_prep_1():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['путь', 'вершина'])
-    p.set_deps([0, -1])
-    p.set_extra([{}, {Attr.PREP_WHITE_LIST: (1, 'к', 1234)}])
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['путь', 'к', 'вершина'],
+        deps=[0, 1, -2],
+    )
 
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC),
+            WordObj(pos_tag=PosTag.ADP),
             WordObj(
                 pos_tag=PosTag.NOUN,
                 gender=WordGender.FEM,
@@ -354,16 +301,18 @@ def test_inflect_ru_with_prep_1():
 
 
 def test_inflect_ru_with_prep_2():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['путь', 'красивый', 'вершина'])
-    p.set_deps([0, 1, -2])
-    p.set_extra([{}, {}, {Attr.PREP_WHITE_LIST: (2, 'к', 1234)}])
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 2, 3],
+        words=['путь', 'красивый', 'вершина'],
+        deps=[0, 1, -2],
+        head_modifier=HeadModifier(prep_modifier=(1, 'к', 1234)),
+    )
 
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC),
+            WordObj(pos_tag=PosTag.ADP),
             WordObj(pos_tag=PosTag.ADJ, number=WordNumber.PLUR, case=WordCase.DAT),
             WordObj(
                 pos_tag=PosTag.NOUN,
@@ -375,16 +324,11 @@ def test_inflect_ru_with_prep_2():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words() == ['путь', 'к', 'красивым', 'вершинам']
+    assert p.get_words() == ['путь', 'красивым', 'вершинам']
 
 
 def test_inflect_ru_phrase4():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['живой', 'глаз'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['живой', 'глаз'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -394,16 +338,11 @@ def test_inflect_ru_phrase4():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['живые', 'глаза']
+    assert p.get_words() == ['живые', 'глаза']
 
 
 def test_inflect_ru_nummod_1():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['миллион', 'человек'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['миллион', 'человек'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -418,16 +357,11 @@ def test_inflect_ru_nummod_1():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['миллион', 'людей']
+    assert p.get_words() == ['миллион', 'людей']
 
 
 def test_inflect_ru_nummod_2():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['один', 'человек'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['один', 'человек'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -437,16 +371,11 @@ def test_inflect_ru_nummod_2():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['один', 'человек']
+    assert p.get_words() == ['один', 'человек']
 
 
 def test_inflect_ru_nummod_3():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['двое', 'человек'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['двое', 'человек'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -456,16 +385,13 @@ def test_inflect_ru_nummod_3():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['двое', 'людей']
+    assert p.get_words() == ['двое', 'людей']
 
 
 def test_inflect_ru_nummod_4():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['двое', 'красивый', 'человек'])
-    p.set_deps([2, 1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2, sent_pos_list=[0, 1, 2], words=['двое', 'красивый', 'человек'], deps=[2, 1, 0]
+    )
 
     sent = lp_doc.Sent(
         [
@@ -481,16 +407,11 @@ def test_inflect_ru_nummod_4():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['двое', 'красивых', 'людей']
+    assert p.get_words() == ['двое', 'красивых', 'людей']
 
 
 def test_ru_propn_inflect1():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['бригадир', 'владычин'])
-    p.set_deps([None, -1])
-    p.set_extra([None] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['бригадир', 'владычин'], deps=[0, -1])
 
     sent = lp_doc.Sent(
         [
@@ -500,16 +421,11 @@ def test_ru_propn_inflect1():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['бригадир', 'Владычин']
+    assert p.get_words() == ['бригадир', 'Владычин']
 
 
 def test_ru_propn_inflect2():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['шляпа', 'валентина'])
-    p.set_deps([None, -1])
-    p.set_extra([None] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['шляпа', 'валентина'], deps=[0, -1])
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.NOUN),
@@ -518,16 +434,11 @@ def test_ru_propn_inflect2():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['шляпа', 'Валентины']
+    assert p.get_words() == ['шляпа', 'Валентины']
 
 
 def test_ru_propn_inflect3():
-    p = Phrase()
-    p.set_head_pos(0)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['иван', 'иванов'])
-    p.set_deps([0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['иван', 'иванов'], deps=[0, -1])
 
     sent = lp_doc.Sent(
         [
@@ -537,16 +448,16 @@ def test_ru_propn_inflect3():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['Иван', 'Иванов']
+    assert p.get_words() == ['Иван', 'Иванов']
 
 
 def test_ru_propn_inflect4():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['красивый', 'валентина', 'иванов'])
-    p.set_deps([1, 0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=1,
+        sent_pos_list=[0, 1, 2],
+        words=['красивый', 'валентина', 'иванов'],
+        deps=[1, 0, -1],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -557,16 +468,11 @@ def test_ru_propn_inflect4():
     )
 
     inflect_phrase(p, sent, Lang.RU)
-    assert p.get_words(False) == ['красивая', 'Валентина', 'Иванова']
+    assert p.get_words() == ['красивая', 'Валентина', 'Иванова']
 
 
 def test_simple_en_pres_part_inflect_1():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['fly', 'enemy'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['fly', 'enemy'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -576,16 +482,11 @@ def test_simple_en_pres_part_inflect_1():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['flying', 'enemy']
+    assert p.get_words() == ['flying', 'enemy']
 
 
 def test_simple_en_pres_part_inflect_2():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['slide', 'window'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['slide', 'window'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -595,16 +496,11 @@ def test_simple_en_pres_part_inflect_2():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['sliding', 'window']
+    assert p.get_words() == ['sliding', 'window']
 
 
 def test_simple_en_pres_part_inflect_3():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['can', 'food'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['can', 'food'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -614,16 +510,11 @@ def test_simple_en_pres_part_inflect_3():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['canning', 'food']
+    assert p.get_words() == ['canning', 'food']
 
 
 def test_simple_en_pres_part_inflect_4():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['fielding', 'side'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['fielding', 'side'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -633,16 +524,11 @@ def test_simple_en_pres_part_inflect_4():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['fielding', 'side']
+    assert p.get_words() == ['fielding', 'side']
 
 
 def test_simple_en_past_part_inflect_1():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['desire', 'objective'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['desire', 'objective'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -652,16 +538,11 @@ def test_simple_en_past_part_inflect_1():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['desired', 'objective']
+    assert p.get_words() == ['desired', 'objective']
 
 
 def test_simple_en_past_part_inflect_2():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['employ', 'man'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['employ', 'man'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -671,16 +552,11 @@ def test_simple_en_past_part_inflect_2():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['employed', 'man']
+    assert p.get_words() == ['employed', 'man']
 
 
 def test_simple_en_past_part_inflect_3():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1])
-    p.set_words(['study', 'course'])
-    p.set_deps([1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['study', 'course'], deps=[1, 0])
 
     sent = lp_doc.Sent(
         [
@@ -690,16 +566,13 @@ def test_simple_en_past_part_inflect_3():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['studied', 'course']
+    assert p.get_words() == ['studied', 'course']
 
 
 def test_en_3phrase_inflect():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['undefine', 'fly', 'object'])
-    p.set_deps([2, 1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2, sent_pos_list=[0, 1, 2], words=['undefine', 'fly', 'object'], deps=[2, 1, 0]
+    )
 
     sent = lp_doc.Sent(
         [
@@ -710,16 +583,13 @@ def test_en_3phrase_inflect():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['undefined', 'flying', 'object']
+    assert p.get_words() == ['undefined', 'flying', 'object']
 
 
 def test_en_plural_inflect_1():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2])
-    p.set_words(['study', 'course', 'match'])
-    p.set_deps([1, 1, 0])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2, sent_pos_list=[0, 1, 2], words=['study', 'course', 'match'], deps=[1, 1, 0]
+    )
 
     sent = lp_doc.Sent(
         [
@@ -730,16 +600,16 @@ def test_en_plural_inflect_1():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['studies', 'courses', 'matches']
+    assert p.get_words() == ['studies', 'courses', 'matches']
 
 
 def test_en_plural_inflect_2():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2, 3])
-    p.set_words(['boy', 'kiss', 'wife', 'vertex'])
-    p.set_deps([1, 1, 0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2,
+        sent_pos_list=[0, 1, 2, 3],
+        words=['boy', 'kiss', 'wife', 'vertex'],
+        deps=[1, 1, 0, -1],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -751,16 +621,16 @@ def test_en_plural_inflect_2():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['boys', 'kisses', 'wives', 'vertices']
+    assert p.get_words() == ['boys', 'kisses', 'wives', 'vertices']
 
 
 def test_en_plural_inflect_3():
-    p = Phrase()
-    p.set_head_pos(2)
-    p.set_sent_pos_list([0, 1, 2, 3])
-    p.set_words(['potato', 'child', 'mouse', 'crisis'])
-    p.set_deps([1, 1, 0, -1])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=2,
+        sent_pos_list=[0, 1, 2, 3],
+        words=['potato', 'child', 'mouse', 'crisis'],
+        deps=[1, 1, 0, -1],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -772,16 +642,16 @@ def test_en_plural_inflect_3():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['Potatoes', 'Children', 'Mice', 'Crises']
+    assert p.get_words() == ['Potatoes', 'Children', 'Mice', 'Crises']
 
 
 def test_en_plural_inflect_4():
-    p = Phrase()
-    p.set_head_pos(1)
-    p.set_sent_pos_list([0, 1, 2, 3])
-    p.set_words(['many', 'people', 'man', 'woman'])
-    p.set_deps([1, 0, -1, -2])
-    p.set_extra([{}] * len(p.get_sent_pos_list()))
+    p = Phrase(
+        head_pos=1,
+        sent_pos_list=[0, 1, 2, 3],
+        words=['many', 'people', 'man', 'woman'],
+        deps=[1, 0, -1, -2],
+    )
 
     sent = lp_doc.Sent(
         [
@@ -793,4 +663,4 @@ def test_en_plural_inflect_4():
     )
 
     inflect_phrase(p, sent, Lang.EN)
-    assert p.get_words(False) == ['many', 'people', 'men', 'women']
+    assert p.get_words() == ['many', 'people', 'men', 'women']

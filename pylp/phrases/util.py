@@ -5,7 +5,7 @@ from typing import Any, Iterator, List
 import collections
 import logging
 
-from pylp.phrases.builder import BasicPhraseBuilder, PhraseBuilder, PhraseBuilderOpts, Phrase
+from pylp.phrases.builder import BasicPhraseBuilder, PhraseBuilder, PhraseBuilderOpts
 from pylp.phrases.phrase import Phrase
 
 from pylp import lp_doc
@@ -48,7 +48,7 @@ def make_phrases(
     MaxN,
     builder_cls=PhraseBuilder,
     builder_opts=PhraseBuilderOpts(),
-):
+) -> List[Phrase]:
     builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
     phrases = builder.build_phrases_for_sent(sent)
     return phrases

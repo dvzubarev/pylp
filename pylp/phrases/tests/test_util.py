@@ -43,8 +43,8 @@ def _create_doc_obj():
     return lp_doc.Doc('id', sents=sents)
 
 
-def _p2str(phrase, with_preps=False):
-    return '_'.join(phrase.get_words(with_preps))
+def _p2str(phrase):
+    return '_'.join(phrase.get_words())
 
 
 def test_add_phrases_to_doc():
@@ -52,22 +52,22 @@ def test_add_phrases_to_doc():
     add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
     sent0 = doc_obj[0]
-    str_phrases = [_p2str(p, with_preps=True) for p in sent0.phrases()]
+    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 3
-    assert str_phrases == ['h1_of_h2', 'h1_of_m1_h2', 'm1_h2']
+    assert str_phrases == ['h1 of h2', 'h1 of m1 h2', 'm1 h2']
 
     sent1 = doc_obj[1]
-    str_phrases = [_p2str(p) for p in sent1.phrases()]
+    str_phrases = [p.get_str_repr() for p in sent1.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 3
-    assert str_phrases == ['m1_h2', 'm1_m2_h2', 'm2_h2']
+    assert str_phrases == ['m1 h2', 'm1 m2 h2', 'm2 h2']
 
     sent2 = doc_obj[2]
-    str_phrases = [_p2str(p, True) for p in sent2.phrases()]
+    str_phrases = [p.get_str_repr() for p in sent2.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 1
-    assert str_phrases == ['h1_of_h3']
+    assert str_phrases == ['h1 of h3']
 
 
 def test_add_phrases_to_doc_with_min_cnt():

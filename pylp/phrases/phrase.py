@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import copy
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from enum import Enum
 
 import libpyexbase
 import pylp.common as lp
@@ -73,35 +74,87 @@ class PhraseId:
         return self._id
 
 
+class HeadModifier:
+    def __init__(self, prep_modifier: Tuple | None = None) -> None:
+        self.prep_modifier = prep_modifier
+
+    def to_dict(self):
+        return {'prep_mod': self.prep_modifier}
+
+    @classmethod
+    def from_dict(cls, dic):
+        hm = cls()
+        hm.prep_modifier = dic['prep_mod']
+
+
+class ReprEnhType(Enum):
+    ADD_WORD = 0
+    ADD_SUFFIX = 1
+
+
+class ReprEnhancer:
+    def __init__(self, rel_pos: int, enh_type: ReprEnhType, value: str) -> None:
+        self.rel_pos = rel_pos
+        self.enh_type = enh_type
+        self.value = value
+
+    def to_dict(self):
+        return {'rel_pos': self.rel_pos, 'enh_type': self.enh_type, 'value': self.value}
+
+    @classmethod
+    def from_dict(cls, dic):
+        return cls(dic['rel_pos'], dic['enh_type'], dic['value'])
+
+
 class Phrase:
-    def __init__(self, pos: int = None, word_obj: WordObj = None):
-        if pos is not None and word_obj is not None:
-            self._head_pos = 0
-            self._sent_pos_list = [pos]
-            if word_obj.lemma is None:
-                raise RuntimeError("Unindentified word")
-            self._words = [word_obj.lemma]
+    def __init__(
+        self,
+        size: int = 0,
+        head_pos: int = 0,
+        sent_pos_list: List[int] | None = None,
+        words: List[str] | None = None,
+        deps: List[int] | None = None,
+        id_holder: PhraseId | None = None,
+        head_modifier: HeadModifier | None = None,
+        repr_modifiers: List[List[ReprEnhancer] | None] | None = None,
+    ):
+        self._size = size
+        self._head_pos = head_pos
+        self._sent_pos_list = sent_pos_list if sent_pos_list is not None else []
+        self._words = words if words is not None else []
+        self._deps = deps if deps is not None else []
+        self._id_holder = id_holder if id_holder is not None else PhraseId()
+        self._head_modifier = head_modifier if head_modifier is not None else HeadModifier()
+        self._repr_modifiers = repr_modifiers if repr_modifiers is not None else []
 
-            self._deps: List[int] = [0]
-            self._extra = [copy.copy(word_obj.extra)]
+    @classmethod
+    def from_word(cls: type["Phrase"], pos: int, word_obj: WordObj):
+        if word_obj.lemma is None:
+            raise RuntimeError("Unindentified word")
 
-            self._id_holder = PhraseId(word_obj)
-        else:
-            self._head_pos = 0
-            self._sent_pos_list = []
-            self._words = []
-            self._deps = []
-            self._extra = []
-            self._id_holder = PhraseId()
+        prep_mod = word_obj.extra.get(lp.Attr.PREP_WHITE_LIST)
+        return cls(
+            size=1,
+            head_pos=0,
+            sent_pos_list=[pos],
+            words=[word_obj.lemma],
+            deps=[0],
+            id_holder=PhraseId(word_obj),
+            head_modifier=HeadModifier(prep_modifier=prep_mod),
+            repr_modifiers=[None],
+        )
 
     def size(self):
+        return self._size
+
+    def size_with_preps(self):
         return len(self._words)
+
+    def get_head_modifier(self):
+        return self._head_modifier
 
     def get_head_pos(self):
         return self._head_pos
-
-    def set_head_pos(self, head_pos):
-        self._head_pos = head_pos
 
     def sent_hp(self):
         return self._sent_pos_list[self._head_pos]
@@ -112,52 +165,34 @@ class Phrase:
     def get_sent_pos_list(self):
         return self._sent_pos_list
 
-    def set_extra(self, extra, need_copy=False):
-        if need_copy:
-            self._extra = [copy.copy(e) for e in extra]
-        else:
-            self._extra = extra
+    def get_words(self):
+        return self._words
 
-    def get_extra(self):
-        return self._extra
+    def get_str_repr(self):
+        if not any(m for m in self._repr_modifiers):
+            return ' '.join(self._words)
 
-    def update_extra(self, pos, info):
-        if self._extra[pos] is None:
-            self._extra[pos] = {}
-        self._extra[pos].update(info)
+        words = copy.copy(self._words)
 
-    def set_words(self, words):
-        self._words = words
+        for pos, repr_enh_list in enumerate(self._repr_modifiers):
+            if repr_enh_list is None:
+                continue
+            for repr_enh in repr_enh_list:
+                match repr_enh.enh_type:
+                    case ReprEnhType.ADD_WORD:
+                        modify_pos = pos + repr_enh.rel_pos
+                        words[modify_pos] = f'{repr_enh.value} ' + words[modify_pos]
+                    case ReprEnhType.ADD_SUFFIX:
+                        modify_pos = pos + repr_enh.rel_pos
+                        words[modify_pos] += repr_enh.value
 
-    def get_words(self, with_preps=True):
-        if not with_preps or not any(e and lp.Attr.PREP_WHITE_LIST in e for e in self._extra):
-            return self._words
-
-        preps = [None] * len(self._words)
-
-        for num, extra in enumerate(self._extra):
-            if extra and lp.Attr.PREP_WHITE_LIST in extra:
-                # this prep should be added after parent
-                # TODO why after?
-                if self._deps[num]:
-                    _, prep_str, _ = extra[lp.Attr.PREP_WHITE_LIST]
-                    preps[num + self._deps[num]] = prep_str
-        words_with_preps = []
-        for num, w in enumerate(self._words):
-            words_with_preps.append(w)
-            if preps[num]:
-                words_with_preps.append(preps[num])
-
-        return words_with_preps
-
-    def set_deps(self, deps):
-        self._deps = deps
+        return ' '.join(words)
 
     def get_deps(self):
         return self._deps
 
-    def set_id_holder(self, pid):
-        self._id_holder = pid
+    def get_repr_modifiers(self):
+        return self._repr_modifiers
 
     def get_id_holder(self):
         return self._id_holder
@@ -200,7 +235,11 @@ class Phrase:
             'sent_pos_lis': self._sent_pos_list,
             'words': self._words,
             'deps': self._deps,
-            'extra': self._extra,
+            'head_mod': self._head_modifier.to_dict(),
+            'repr_modifierrs': [
+                [m.to_dict() for m in mod_list] if mod_list is not None else None
+                for mod_list in self._repr_modifiers
+            ],
             'id_holder': self._id_holder.to_dict(),
         }
 
@@ -211,12 +250,16 @@ class Phrase:
         phrase._sent_pos_list = dic['sent_pos_list']
         phrase._words = dic['words']
         phrase._deps = dic['deps']
-        phrase._extra = dic['extra']
+        phrase._head_modifier = HeadModifier.from_dict(dic['head_mod'])
+        phrase._repr_modifiers = [
+            [ReprEnhancer.from_dict(d) for d in mod_list] if mod_list is not None else None
+            for mod_list in dic['repr_modifiers']
+        ]
         phrase._id_holder = PhraseId.from_dict(dic['id_holder'])
         return phrase
 
     def __repr__(self) -> str:
-        return f"Phrase(id={self.get_id()}, words= {self.get_words()})"
+        return f"Phrase(id={self.get_id()}, words={self.get_words()})"
 
     def __str__(self):
         return (

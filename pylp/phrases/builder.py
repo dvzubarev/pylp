@@ -10,29 +10,7 @@ import pylp.common as lp
 from pylp import lp_doc
 from pylp.word_obj import WordObj
 
-from pylp.phrases.phrase import Phrase
-
-
-def make_2word_phrase(head_phrase: Phrase, mod_phrase: Phrase, sent: lp_doc.Sent):
-    head_pos = head_phrase.get_sent_pos_list()[0]
-    mod_pos = mod_phrase.get_sent_pos_list()[0]
-
-    p = Phrase()
-
-    mod_on_left = mod_pos < head_pos
-    p.set_head_pos(1 if mod_on_left else 0)
-    p.set_sent_pos_list([mod_pos, head_pos] if mod_on_left else [head_pos, mod_pos])
-    p.set_words([sent[p].lemma for p in p.get_sent_pos_list()])
-    p.set_deps([1, 0] if mod_on_left else [0, -1])
-
-    mod_extra = copy.copy(sent[mod_pos].extra)
-    head_extra = copy.copy(sent[head_pos].extra)
-    p.set_extra([mod_extra, head_extra] if mod_pos < head_pos else [head_extra, mod_extra])
-
-    p.set_id_holder(
-        copy.copy(head_phrase.get_id_holder()).merge_mod(mod_phrase.get_id_holder(), mod_on_left)
-    )
-    return p
+from pylp.phrases.phrase import Phrase, ReprEnhancer, ReprEnhType
 
 
 def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
@@ -66,7 +44,44 @@ def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
     return insert_pos
 
 
+def _is_new_phrase_valid(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent):
+    other_head_modifier = other_phrase.get_head_modifier()
+    if (
+        other_head_modifier.prep_modifier is not None
+        and other_head_modifier.prep_modifier[0] > other_phrase.get_sent_pos_list()[0]
+    ):
+        logging.warning(
+            "Preposition should be before all modificators: prep=%s, phrase=%s",
+            other_head_modifier.prep_modifier,
+            other_phrase,
+        )
+        return False
+
+    return True
+
+
+def _create_repr_modifiers(other_phrase: Phrase, sent: lp_doc.Sent):
+    other_repr_modifiers = copy.copy(other_phrase.get_repr_modifiers())
+
+    other_head_modifier = other_phrase.get_head_modifier()
+    if other_head_modifier.prep_modifier is not None:
+        head_pos = other_phrase.get_head_pos()
+        prep_str = other_head_modifier.prep_modifier[1]
+        repr_enh = ReprEnhancer(-head_pos, ReprEnhType.ADD_WORD, prep_str)
+
+        enh_list = other_repr_modifiers[head_pos]
+        if enh_list is None:
+            enh_list = []
+            other_repr_modifiers[head_pos] = enh_list
+        enh_list.append(repr_enh)
+
+    return other_repr_modifiers
+
+
 def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent, phrases_cache):
+    if not _is_new_phrase_valid(head_phrase, other_phrase, sent):
+        return None
+
     new_mod_sz = other_phrase.size()
     old_head_pos = head_pos = head_phrase.get_head_pos()
 
@@ -117,23 +132,27 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent
     )
 
     words = [sent[p].lemma for p in phrase_signature]
-    new_phrase = Phrase()
-    new_phrase.set_head_pos(head_pos)
-    new_phrase.set_words(words)
-    new_phrase.set_deps(deps)
-    new_phrase.set_extra(
-        head_phrase.get_extra()[:insert_pos]
-        + other_phrase.get_extra()
-        + head_phrase.get_extra()[insert_pos:],
-        need_copy=True,
+    id_holder = copy.copy(head_phrase.get_id_holder()).merge_mod(
+        other_phrase.get_id_holder(), other_on_left
     )
 
-    new_phrase.set_id_holder(
-        copy.copy(head_phrase.get_id_holder()).merge_mod(
-            other_phrase.get_id_holder(), other_on_left
-        )
+    head_repr_modifiers = head_phrase.get_repr_modifiers()
+    other_repr_modifiers = _create_repr_modifiers(other_phrase, sent)
+
+    repr_modifiers = (
+        head_repr_modifiers[:insert_pos] + other_repr_modifiers + head_repr_modifiers[insert_pos:]
     )
-    new_phrase.set_sent_pos_list(phrase_signature)
+
+    new_phrase = Phrase(
+        size=head_phrase.size() + new_mod_sz,
+        head_pos=head_pos,
+        words=words,
+        deps=deps,
+        sent_pos_list=phrase_signature,
+        id_holder=id_holder,
+        head_modifier=head_phrase.get_head_modifier(),
+        repr_modifiers=repr_modifiers,
+    )
 
     return new_phrase
 
@@ -198,7 +217,7 @@ class BasicPhraseBuilder:
 
             if is_good_head or is_good_mod:
                 try:
-                    phrase = Phrase(i, word_obj)
+                    phrase = Phrase.from_word(i, word_obj)
                     cur_word_index = [[] for _ in range(self._max_n)]
                     words_index[i] = cur_word_index
                     # init words_index's level 0
@@ -236,9 +255,9 @@ class BasicPhraseBuilder:
         self, words_index: PhrasesIndexType, good_mods_index: ModsIndexType, sent: lp_doc.Sent
     ):
         phrases_cache = set()
-        for l in range(1, self._max_n - 1):
-            for head_pos, h in enumerate(words_index):
-                if h is None:
+        for l in range(0, self._max_n - 1):
+            for head_pos, head_index in enumerate(words_index):
+                if head_index is None:
                     continue
                 mods_index = good_mods_index[head_pos]
                 if not mods_index:
@@ -247,9 +266,6 @@ class BasicPhraseBuilder:
                 # extend the phrases from previous levels with modificators
                 # e.g. we can take already built 2word phrase, add one modificator and get 3word phrase.
                 # or get 2word phrase, add modificator from level 1 that consists of 2 words.
-                head_index = words_index[head_pos]
-                if head_index is None:
-                    continue
                 for head_level, head_phrases in enumerate(head_index):
                     mod_level = l - head_level
                     if mod_level < 0:
@@ -281,21 +297,7 @@ class BasicPhraseBuilder:
         logging.debug("good_mods_index: %s", good_mods_index)
         logging.debug("words index: %s", words_index)
 
-        # create 2word phrases using sligthly optimized function
-        level = 0
-        for head_pos, good_mods_list in enumerate(good_mods_index):
-            head_index = words_index[head_pos]
-            if good_mods_list is None or head_index is None:
-                continue
-
-            for mod_pos in good_mods_list:
-                mod_index = words_index[mod_pos]
-                if mod_index is None:
-                    continue
-                p = make_2word_phrase(head_index[level][0], mod_index[level][0], sent)
-                head_index[level + 1].append(p)
-
-        # fill words_index's levels 2 .. MaxN
+        # fill words_index's levels 1 .. MaxN
         self._generate_phrases(words_index, good_mods_index, sent)
 
         all_phrases = []
@@ -428,6 +430,7 @@ class PhraseBuilder(BasicPhraseBuilder):
         extra_dict = {}
         if whitelisted_preps:
             if len(whitelisted_preps) > 1:
+                # TODO chose the closest one
                 logging.warning(
                     "more than one whitelisted preps: %s choosing only the first one",
                     whitelisted_preps,
