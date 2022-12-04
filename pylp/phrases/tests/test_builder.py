@@ -294,7 +294,7 @@ def test_phrases_with_prepositions():
 def test_phrases_with_prepositions_1():
     words = [
         _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
-        _mkw('к', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('из', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
         _mkw('h2', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
     ]
     sent = lp_doc.Sent(words)
@@ -304,7 +304,7 @@ def test_phrases_with_prepositions_1():
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
     assert len(phrases) == 1
-    assert str_phrases == ['h1 к h2']
+    assert str_phrases == ['h1 из h2']
 
 
 def test_phrases_with_prepositions_2():
@@ -370,6 +370,137 @@ def test_phrases_with_repr_mod_suffix_2():
     str_phrases.sort()
     assert len(phrases) == 3
     assert str_phrases == ["Wilson's conviction", "Wilson's old conviction", 'old conviction']
+
+
+def test_phrases_propagate_conj_1():
+    words = [
+        _mkw('root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('and', 1, lp.PosTag.CCONJ, lp.SyntLink.CC),
+        _mkw('conj_root', -2, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('nmod', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 2
+    assert str_phrases == ['conj_root nmod', 'root nmod']
+
+
+def test_phrases_propagate_conj_2():
+    words = [
+        _mkw('root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('nmod1', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('and', 1, lp.PosTag.CCONJ, lp.SyntLink.CC),
+        _mkw('nmod2', -2, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 2
+    assert str_phrases == ['root nmod1', 'root nmod2']
+
+
+def test_phrases_propagate_conj_3():
+    words = [
+        _mkw('root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('conj_root_2', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('and', 1, lp.PosTag.CCONJ, lp.SyntLink.CC),
+        _mkw('conj_root_3', -2, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('nmod', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == ['conj_root_2 nmod', 'conj_root_3 nmod', 'root nmod']
+
+
+def test_phrases_propagate_conj_4():
+    words = [
+        _mkw('amod1', 4, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('amod2', -1, lp.PosTag.ADJ, lp.SyntLink.CONJ),
+        _mkw('and', 1, lp.PosTag.CCONJ, lp.SyntLink.CC),
+        _mkw('amod3', -2, lp.PosTag.ADJ, lp.SyntLink.CONJ),
+        _mkw('root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 3
+    assert str_phrases == [
+        'amod1 root',
+        'amod2 root',
+        'amod3 root',
+    ]
+
+
+def test_phrases_propagate_conj_5():
+    words = [
+        _mkw('amod1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('amod2', -1, lp.PosTag.ADJ, lp.SyntLink.CONJ),
+        _mkw('root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('amod3', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('conj_root_2', -2, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('nmod', -1, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 8
+    assert str_phrases == [
+        'amod1 root',
+        'amod1 root nmod',
+        'amod2 root',
+        'amod2 root nmod',
+        'amod3 conj_root_2',
+        'amod3 conj_root_2 nmod',
+        'conj_root_2 nmod',
+        'root nmod',
+    ]
+
+
+def test_phrases_propagate_conj_6():
+    words = [
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h2', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('h3', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('m2', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h4', -3, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 7
+    assert str_phrases == [
+        'm1 h2',
+        'm2 h4',
+        'r of h2',
+        'r of h3',
+        'r of h4',
+        'r of m1 h2',
+        'r of m2 h4',
+    ]
 
 
 def test_phrase_id():

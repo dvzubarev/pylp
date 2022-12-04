@@ -306,7 +306,6 @@ def test_inflect_ru_with_prep_2():
         sent_pos_list=[0, 2, 3],
         words=['путь', 'красивый', 'вершина'],
         deps=[0, 1, -2],
-        head_modifier=HeadModifier(prep_modifier=(1, 'к', 1234)),
     )
 
     sent = lp_doc.Sent(
@@ -325,6 +324,38 @@ def test_inflect_ru_with_prep_2():
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words() == ['путь', 'красивым', 'вершинам']
+
+
+def test_inflect_ru_with_prep_3():
+    # напиток из шиповника и яблок
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 4],
+        words=['напиток', 'яблоко'],
+        deps=[0, -1],
+    )
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.MASC),
+            WordObj(pos_tag=PosTag.ADP),
+            WordObj(
+                pos_tag=PosTag.NOUN, case=WordCase.GEN, parent_offs=-2, synt_link=SyntLink.NMOD
+            ),
+            WordObj(pos_tag=PosTag.CCONJ),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                parent_offs=-2,
+                number=WordNumber.PLUR,
+                synt_link=SyntLink.CONJ,
+                case=WordCase.GEN,
+            ),
+            WordObj(pos_tag=PosTag.PUNCT),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['напиток', 'яблок']
 
 
 def test_inflect_ru_phrase4():

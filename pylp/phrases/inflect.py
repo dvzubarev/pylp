@@ -177,12 +177,29 @@ class RuInflector(BaseInflector):
         form = self._pymorphy_inflect(word, "NOUN", {number, case})
         return form, word_obj.case
 
+    def _resolve_conj_link(self, pos: int, word_obj: WordObj, sent: lp_doc.Sent):
+        while word_obj.parent_offs and word_obj.synt_link == SyntLink.CONJ:
+            pos += word_obj.parent_offs
+            word_obj = sent[pos]
+        return word_obj.synt_link
+
     def _inflect_noun_noun(
-        self, phrase: Phrase, head_pos, head_obj: WordObj, mod_pos, mod_obj: WordObj
+        self,
+        phrase: Phrase,
+        head_pos,
+        head_obj: WordObj,
+        mod_pos,
+        mod_obj: WordObj,
+        sent: lp_doc.Sent,
     ):
         phrase_words = phrase.get_words()
         form = None
-        if mod_obj.synt_link in (
+        link = mod_obj.synt_link
+        if link == SyntLink.CONJ:
+            mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
+            link = self._resolve_conj_link(mod_sent_pos, mod_obj, sent)
+
+        if link in (
             SyntLink.NMOD,
             SyntLink.COMPOUND,
         ):
@@ -190,7 +207,7 @@ class RuInflector(BaseInflector):
 
             if case is not None:
                 self._cases[mod_pos] = case
-        elif mod_obj.synt_link == SyntLink.NUMMOD:
+        elif link == SyntLink.NUMMOD:
             # have to inflect head word
             if head_obj.number == WordNumber.PLUR:
                 head_form, case = self._inflect_to_case(phrase_words[head_pos], head_obj)
@@ -199,7 +216,7 @@ class RuInflector(BaseInflector):
                 if case is not None:
                     self._cases[head_pos] = case
 
-        elif mod_obj.synt_link in (SyntLink.FIXED, SyntLink.FLAT, SyntLink.APPOS):
+        elif link in (SyntLink.FIXED, SyntLink.FLAT, SyntLink.APPOS):
             # see test_ru_propn_inflect4 ['красивая', 'Валентина', 'Иванова']
             gender = self._gender2pymorphy(head_obj.gender)
             if gender is not None:
@@ -225,7 +242,12 @@ class RuInflector(BaseInflector):
 
             if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN, PosTag.NUM):
                 self._inflect_noun_noun(
-                    phrase, head_pos=head_pos, head_obj=head_obj, mod_pos=mod_pos, mod_obj=mod_obj
+                    phrase,
+                    head_pos=head_pos,
+                    head_obj=head_obj,
+                    mod_pos=mod_pos,
+                    mod_obj=mod_obj,
+                    sent=sent,
                 )
             elif mod_obj.pos_tag in (PosTag.ADJ, PosTag.PARTICIPLE):
                 feats = set()

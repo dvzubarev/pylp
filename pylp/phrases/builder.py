@@ -4,13 +4,26 @@
 import math
 import logging
 import copy
-from typing import Iterator, List, Optional, FrozenSet, Tuple
+from typing import Iterator, List, Optional, FrozenSet
 
 import pylp.common as lp
 from pylp import lp_doc
 from pylp.word_obj import WordObj
 
 from pylp.phrases.phrase import Phrase, ReprEnhancer, ReprEnhType
+
+
+def _sorted_lists_intersect(li1, li2):
+    i = j = 0
+    while i < len(li1) and j < len(li2):
+        if li1[i] < li2[j]:
+            i += 1
+        elif li2[j] < li1[i]:
+            j += 1
+        else:
+            return True
+
+    return False
 
 
 def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
@@ -178,6 +191,24 @@ PhrasesIndexType = List[Optional[List[List[Phrase]]]]
 ModsIndexType = List[Optional[List[int]]]
 
 
+class AuxBuilderInfo:
+    def __init__(self) -> None:
+        self.conj_set: List[int] = []
+        self.main_mod_pos: int | None = None
+
+
+class AuxBuilderIndices:
+    def __init__(
+        self,
+        words_index: PhrasesIndexType,
+        mods_index: ModsIndexType,
+        aux_info_list: List[AuxBuilderInfo | None],
+    ):
+        self.words_index = words_index
+        self.mods_index = mods_index
+        self.aux_info_list = aux_info_list
+
+
 class BasicPhraseBuilderOpts:
     def __init__(self):
         pass
@@ -206,9 +237,80 @@ class BasicPhraseBuilder:
                     mod_list.append(i)
         return mods_index
 
+    def _init_word_index(self, pos: int, word_obj: WordObj, words_index: PhrasesIndexType):
+        try:
+            phrase = Phrase.from_word(pos, word_obj)
+            cur_word_index = [[] for _ in range(self._max_n)]
+            words_index[pos] = cur_word_index
+            # init words_index's level 0
+            cur_word_index[0] = [phrase]
+        except RuntimeError as ex:
+            logging.warning("Failed to create phrase from word_obj: %s", ex)
+
+    def _resolve_conj_modifier(
+        self,
+        pos: int,
+        word_obj: WordObj,
+        sent: lp_doc.Sent,
+        aux_info_list: List[AuxBuilderInfo | None],
+    ):
+        init_pos = pos
+        # find the actual head of your conj
+        link = word_obj.synt_link
+        while word_obj.parent_offs and link == lp.SyntLink.CONJ:
+            # at first find the modificator with no CONJ type
+            conj_pos = pos + word_obj.parent_offs
+            conj_obj = sent[conj_pos]
+
+            pos = conj_pos
+            word_obj = conj_obj
+            link = conj_obj.synt_link
+
+        if init_pos != pos:
+            aux_info = aux_info_list[init_pos]
+            if aux_info is None:
+                aux_info = AuxBuilderInfo()
+                aux_info_list[init_pos] = aux_info
+
+            aux_info.main_mod_pos = pos
+
+            main_mod_aux_info = aux_info_list[pos]
+            if main_mod_aux_info is None:
+                main_mod_aux_info = AuxBuilderInfo()
+                aux_info_list[pos] = main_mod_aux_info
+                main_mod_aux_info.conj_set = [pos]
+
+            insert_pos = len(main_mod_aux_info.conj_set)
+            while insert_pos > 0 and init_pos < main_mod_aux_info.conj_set[insert_pos - 1]:
+                insert_pos -= 1
+            main_mod_aux_info.conj_set.insert(insert_pos, init_pos)
+            aux_info.conj_set = main_mod_aux_info.conj_set
+
+        if word_obj.parent_offs:
+            return pos + word_obj.parent_offs, word_obj
+
+        return None, None
+
+    def _propagate_head_modifiers_to_conj(self, aux_indices: AuxBuilderIndices):
+        for pos, aux_info in enumerate(aux_indices.aux_info_list):
+            if aux_info is None or aux_info.main_mod_pos is None:
+                continue
+
+            if (conj_phrases := aux_indices.words_index[pos]) is None:
+                continue
+            conj_mod_phrase = conj_phrases[0][0]
+            if (main_phrases := aux_indices.words_index[aux_info.main_mod_pos]) is None:
+                continue
+            main_mod_phrase = main_phrases[0][0]
+
+            if (
+                conj_head_mod := conj_mod_phrase.get_head_modifier()
+            ) and conj_head_mod.prep_modifier is None:
+                conj_head_mod.prep_modifier = main_mod_phrase.get_head_modifier().prep_modifier
+
     def _create_indices(
         self, sent: lp_doc.Sent, all_mods_index: ModsIndexType
-    ) -> Tuple[PhrasesIndexType, ModsIndexType]:
+    ) -> AuxBuilderIndices:
         # words_index:
         # for each word there is a list of size MaxN
         # index 0 -> single words
@@ -217,56 +319,88 @@ class BasicPhraseBuilder:
         # mods_index is modificators of words
         words_index: PhrasesIndexType = [None] * len(sent)
         good_mods_index: ModsIndexType = [None] * len(sent)
+        aux_info_list: List[AuxBuilderInfo | None] = [None] * len(sent)
 
         for i, word_obj in enumerate(sent):
-            is_good_mod = self._test_pair(word_obj, i, sent, all_mods_index)
             is_good_head = self._test_head(word_obj, i, sent, all_mods_index)
+            if words_index[i] is None and is_good_head:
+                self._init_word_index(i, word_obj, words_index)
 
-            if is_good_head or is_good_mod:
-                try:
-                    phrase = Phrase.from_word(i, word_obj)
-                    cur_word_index = [[] for _ in range(self._max_n)]
-                    words_index[i] = cur_word_index
-                    # init words_index's level 0
-                    cur_word_index[0] = [phrase]
-                except RuntimeError as ex:
-                    logging.warning("Failed to create phrase from word_obj: %s", ex)
+            if not word_obj.parent_offs:
+                continue
 
-            if is_good_mod and word_obj.parent_offs:
-                head_pos = i + word_obj.parent_offs
-                mods_list = good_mods_index[head_pos]
-                if mods_list is None:
-                    good_mods_index[head_pos] = [i]
+            head_pos, mod_word_obj = self._resolve_conj_modifier(i, word_obj, sent, aux_info_list)
+            if head_pos is None or mod_word_obj is None:
+                continue
+
+            # collect all head words with conjunct relation
+            conj_heads = [head_pos]
+            head_obj = sent[head_pos]
+            while head_obj.parent_offs and head_obj.synt_link == lp.SyntLink.CONJ:
+                conj_pos = head_pos + head_obj.parent_offs
+
+                if (conj_pos - i) * (head_pos - i) > 0:
+                    # two conj heads on the same side of this modifier
+                    head_pos = conj_pos
+                    conj_heads.append(head_pos)
+                    head_obj = sent[head_pos]
                 else:
-                    mods_list.append(i)
+                    break
 
-        return words_index, good_mods_index
+            for head_pos in conj_heads:
+                is_good_mod = self._test_pair(head_pos, mod_word_obj, i, sent, all_mods_index)
+
+                if words_index[i] is None and is_good_mod:
+                    self._init_word_index(i, word_obj, words_index)
+
+                if is_good_mod:
+                    mods_list = good_mods_index[head_pos]
+                    if mods_list is None:
+                        good_mods_index[head_pos] = [i]
+                    else:
+                        mods_list.append(i)
+
+        aux_indices = AuxBuilderIndices(words_index, good_mods_index, aux_info_list)
+        self._propagate_head_modifiers_to_conj(aux_indices)
+        return aux_indices
 
     def _modifiers_generator(
         self,
         modificators: List[int],
-        words_index: PhrasesIndexType,
+        aux_indices: AuxBuilderIndices,
         level: int,
-        ignore_mods: List[int],
+        head_phrase_sent_pos: List[int],
     ):
         for mod_pos in modificators:
-            if mod_pos in ignore_mods:
+            if mod_pos in head_phrase_sent_pos:
+                # this modifier is already in phrase
                 continue
-            mod_phrases = words_index[mod_pos]
+
+            aux_info = aux_indices.aux_info_list[mod_pos]
+            conj_set = aux_info.conj_set if aux_info is not None else []
+
+            if conj_set:
+                # we have to check if the phrase already contains words with conjunct relation to the current modifier.
+                # we don't want to combine words with conjunct relation in one phrase,
+                # it may become a bit hairy when forming a string representation of a phrase.
+                # Especially when phrase also contains prepositions.
+                if _sorted_lists_intersect(head_phrase_sent_pos, conj_set):
+                    continue
+
+            mod_phrases = aux_indices.words_index[mod_pos]
             if mod_phrases is None:
                 continue
+
             for mod_phrase in mod_phrases[level]:
                 yield mod_phrase
 
-    def _generate_phrases(
-        self, words_index: PhrasesIndexType, good_mods_index: ModsIndexType, sent: lp_doc.Sent
-    ):
+    def _generate_phrases(self, sent: lp_doc.Sent, aux_indices: AuxBuilderIndices):
         phrases_cache = set()
         for l in range(0, self._max_n - 1):
-            for head_pos, head_index in enumerate(words_index):
+            for head_pos, head_index in enumerate(aux_indices.words_index):
                 if head_index is None:
                     continue
-                mods_index = good_mods_index[head_pos]
+                mods_index = aux_indices.mods_index[head_pos]
                 if not mods_index:
                     # no modificators
                     continue
@@ -282,7 +416,7 @@ class BasicPhraseBuilder:
                             head_phrase,
                             self._modifiers_generator(
                                 mods_index,
-                                words_index,
+                                aux_indices,
                                 mod_level,
                                 head_phrase.get_sent_pos_list(),
                             ),
@@ -300,15 +434,15 @@ class BasicPhraseBuilder:
 
         self._create_extra(sent, all_mods_index)
 
-        words_index, good_mods_index = self._create_indices(sent, all_mods_index)
-        logging.debug("good_mods_index: %s", good_mods_index)
-        logging.debug("words index: %s", words_index)
+        aux_indices = self._create_indices(sent, all_mods_index)
+        logging.debug("good_mods_index: %s", aux_indices.mods_index)
+        logging.debug("words index: %s", aux_indices.words_index)
 
         # fill words_index's levels 1 .. MaxN
-        self._generate_phrases(words_index, good_mods_index, sent)
+        self._generate_phrases(sent, aux_indices)
 
         all_phrases = []
-        for head_phrases in words_index:
+        for head_phrases in aux_indices.words_index:
             if head_phrases is None:
                 continue
             for l in range(1, self._max_n):
@@ -319,19 +453,15 @@ class BasicPhraseBuilder:
 
     def _test_pair(
         self,
+        head_pos: int,
         mod_word_obj: WordObj,
         mod_pos: int,
         sent: lp_doc.Sent,
         mods_index: ModsIndexType,
     ):
-        if not mod_word_obj.parent_offs:
-            return False
-
-        if not self._test_modifier(mod_word_obj, mod_pos, sent, mods_index):
-            return False
-
-        head_pos = mod_pos + mod_word_obj.parent_offs
-        return self._test_head(sent[head_pos], head_pos, sent, mods_index)
+        return self._test_modifier(mod_word_obj, mod_pos, sent, mods_index) and self._test_head(
+            sent[head_pos], head_pos, sent, mods_index
+        )
 
     def _create_extra(self, sent: lp_doc.Sent, mods_index: ModsIndexType):
         pass
@@ -358,7 +488,7 @@ class BasicPhraseBuilder:
 class PhraseBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
-        max_syntax_dist=7,
+        max_syntax_dist=10,
         good_mod_PoS: Optional[FrozenSet[lp.PosTag]] = None,
         good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
         whitelisted_preps: Optional[frozenset] = None,
@@ -492,12 +622,13 @@ class PhraseBuilder(BasicPhraseBuilder):
 
     def _test_pair(
         self,
+        head_pos: int,
         mod_word_obj: WordObj,
         mod_pos: int,
         sent: lp_doc.Sent,
         mods_index: ModsIndexType,
     ):
-        return super()._test_pair(mod_word_obj, mod_pos, sent, mods_index)
+        return super()._test_pair(head_pos, mod_word_obj, mod_pos, sent, mods_index)
 
     def _test_nmod(self, word_obj: WordObj):
         """Return true if this nmod without prepositions or with whitelisted preposition"""
