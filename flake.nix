@@ -14,25 +14,21 @@
   outputs = { self,  textapp-pkgs, pyexbase }:
     let pkgs = import textapp-pkgs.inputs.nixpkgs {
           system = "x86_64-linux";
-          overlays = [ textapp-pkgs.overlay  self.overlay ];
+          overlays = [ textapp-pkgs.overlays.default  self.overlays.default ];
         };
         python-overlay = pyfinal: pyprev: {pylp = pyfinal.callPackage ./nix {src=self;};};
+        tlib = textapp-pkgs.lib;
     in {
-      overlay = textapp-pkgs.lib.composeManyExtensions [
-        pyexbase.overlay
+      overlays.default = tlib.composeManyExtensions [
+        pyexbase.overlays.default
         (
-          final: prev: {python = textapp-pkgs.lib.overridePython python-overlay final prev;}
+          final: prev: tlib.overrideAllPyVersions python-overlay prev
         )
       ];
 
-      defaultPackage.x86_64-linux = pkgs.python.pkgs.pylp;
-      packages.x86_64-linux = {
-        inherit (pkgs)
-          python;
-
-      };
-
-      devShell.x86_64-linux =
+      packages.x86_64-linux = tlib.allPyVersionsAttrSet {final-pkgs=pkgs;
+                                                         default="pylp";};
+      devShells.x86_64-linux.default =
         let pypkgs = pkgs.python.pkgs;
         in
           pkgs.mkShell {
