@@ -243,7 +243,7 @@ CONLLU_TEXT_WITH_SYNT_2 = """# text = It comes in silver and black casing
 3	in	in	ADP	IN	_	7	case	7:case	_
 4	silver	silver	ADJ	JJ	Degree=Pos	7	amod	7:amod	_
 5	and	and	CCONJ	CC	_	6	cc	6:cc	_
-6	black	black	ADJ	JJ	Degree=Pos	4	conj	4:conj:and|7:amod	_
+6	black	black	ADJ	JJ	Degree=Pos	4	conj	7:amod|4:conj:and	_
 7	casing	casing	NOUN	NN	Number=Sing	2	obl	2:obl:in	_
 
 """
@@ -288,8 +288,8 @@ def test_picking_alt_synt_link_2():
     # ignore conj
     # 4:conj:and|8:nsubj
     word1_2 = sent1[1]
-    assert word1_2.parent_offs == 6
-    assert word1_2.synt_link == common.SyntLink.NSUBJ
+    assert word1_2.parent_offs == 2
+    assert word1_2.synt_link == common.SyntLink.CONJ
 
     word1_3 = sent1[2]
     assert word1_3.parent_offs == 1

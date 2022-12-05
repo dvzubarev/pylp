@@ -126,13 +126,13 @@ class ConverterConllUDV1:
         if word[self.ENH_DEP] != '_':
             dep_vars = word[self.ENH_DEP].split('|')
             # choose the one that can be used to make phrases later
-            # or something else but ignore conj rel
             for var in dep_vars:
                 head_str, rel_str, *_ = var.split(':', 2)
-                if rel_str == 'conj':
-                    continue
                 temp_rel = common.SYNT_LINK_DICT[rel_str.upper()]
-                if temp_rel in DEF_PHRASE_BUILDER_OPTS.good_synt_rels:
+                if (
+                    temp_rel == common.SyntLink.CONJ
+                    or temp_rel in DEF_PHRASE_BUILDER_OPTS.good_synt_rels
+                ):
                     rel = temp_rel
                     head = int(head_str)
                     break
