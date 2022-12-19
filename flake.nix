@@ -40,8 +40,7 @@
               pypkgs.jupyter_server
             ];
 
-            # shellHook='' '';
-            # dontUseSetuptoolsShellHook = true;
+            shellHook=''[ -z "$PS1" ] && export PYTHONPATH=`pwd`:$PYTHONPATH || setuptoolsShellHook'';
 
           };
     };
