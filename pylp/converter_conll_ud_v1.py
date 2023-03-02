@@ -84,6 +84,9 @@ def _assign_morph_features(word_obj: WordObj, morph_feats, pos_tag):
 def _convert_upos_tag(conllu_pos_tag: str):
     if conllu_pos_tag == '_':
         return common.PosTag.UNDEF
+    if conllu_pos_tag in ("''", '.', '``'):
+        # trash from AmalGUM
+        return common.PosTag.PUNCT
     pos_tag = common.POS_TAG_DICT.get(conllu_pos_tag, common.PosTag.UNDEF)
     if pos_tag == common.PosTag.UNDEF:
         logging.warning("Unknown conllu_pos_tag: %s", conllu_pos_tag)
