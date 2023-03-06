@@ -13,6 +13,6 @@ buildPythonPackage {
   inherit src;
 
   propagatedBuildInputs=[ujson pyexbase pymorphy2];
-  checkInputs=[pytest];
+  nativeCheckInputs=[pytest];
   checkPhase="pytest";
 }
