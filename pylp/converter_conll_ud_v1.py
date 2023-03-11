@@ -31,22 +31,6 @@ class ConllFormatStreamParser:
 DEF_PHRASE_BUILDER_OPTS = pylp.phrases.builder.PhraseBuilderOpts()
 
 
-def _adjust_verb(morph_feats, word_obj: WordObj):
-    if 'VerbForm' in morph_feats:
-        if morph_feats['VerbForm'] in ('Ger', 'Part'):
-            if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
-                word_obj.pos_tag = common.PosTag.PARTICIPLE_SHORT
-            else:
-                word_obj.pos_tag = common.PosTag.PARTICIPLE
-        elif morph_feats['VerbForm'] == 'Conv':
-            word_obj.pos_tag = common.PosTag.PARTICIPLE_ADVERB
-
-
-def _adjust_adj(morph_feats, word_obj: WordObj):
-    if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
-        word_obj.pos_tag = common.PosTag.ADJ_SHORT
-
-
 def _assign_morph_features(word_obj: WordObj, morph_feats, pos_tag):
     if 'Number' in morph_feats:
         word_obj.number = common.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
@@ -81,7 +65,24 @@ def _assign_morph_features(word_obj: WordObj, morph_feats, pos_tag):
         word_obj.animacy = common.WORD_ANIMACY_DICT[morph_feats['Animacy'].upper()]
 
 
-def _convert_upos_tag(conllu_pos_tag: str):
+def _adjust_verb(pos_tag, morph_feats):
+    if 'VerbForm' in morph_feats:
+        if morph_feats['VerbForm'] in ('Ger', 'Part'):
+            if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
+                return common.PosTag.PARTICIPLE_SHORT
+            return common.PosTag.PARTICIPLE
+        if morph_feats['VerbForm'] == 'Conv':
+            return common.PosTag.PARTICIPLE_ADVERB
+    return pos_tag
+
+
+def _adjust_adj(pos_tag, morph_feats):
+    if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
+        return common.PosTag.ADJ_SHORT
+    return pos_tag
+
+
+def convert_upos_tag(conllu_pos_tag: str, morph_feats):
     if conllu_pos_tag == '_':
         return common.PosTag.UNDEF
     if conllu_pos_tag in ("''", '.', '``'):
@@ -90,20 +91,21 @@ def _convert_upos_tag(conllu_pos_tag: str):
     pos_tag = common.POS_TAG_DICT.get(conllu_pos_tag, common.PosTag.UNDEF)
     if pos_tag == common.PosTag.UNDEF:
         logging.warning("Unknown conllu_pos_tag: %s", conllu_pos_tag)
+
+    # TODO other verb forms Fin? Imp?
+    # TODO 'VerbForm' may occur not only for verbs
+    if pos_tag == common.PosTag.VERB:
+        return _adjust_verb(pos_tag, morph_feats)
+    if pos_tag == common.PosTag.ADJ:
+        return _adjust_adj(pos_tag, morph_feats)
+
     return pos_tag
 
 
 def fill_morph_info(conllu_pos_tag: str, morph_str: str, word_obj: WordObj):
-    word_obj.pos_tag = _convert_upos_tag(conllu_pos_tag)
     morph_feats = [(s.split('=')) for s in morph_str.split('|') if len(morph_str) > 2]
     morph_feats = dict(morph_feats)
-
-    # TODO other verb forms Fin? Imp?
-    # TODO 'VerbForm' may occur not only for verbs
-    if word_obj.pos_tag == common.PosTag.VERB:
-        _adjust_verb(morph_feats, word_obj)
-    elif word_obj.pos_tag == common.PosTag.ADJ:
-        _adjust_adj(morph_feats, word_obj)
+    word_obj.pos_tag = convert_upos_tag(conllu_pos_tag, morph_feats)
 
     _assign_morph_features(word_obj, morph_feats, word_obj.pos_tag)
 
