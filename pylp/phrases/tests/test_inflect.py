@@ -507,7 +507,7 @@ def test_simple_en_pres_part_inflect_1():
 
     sent = lp_doc.Sent(
         [
-            WordObj(pos_tag=PosTag.PARTICIPLE_ADVERB),
+            WordObj(pos_tag=PosTag.GERUND),
             WordObj(pos_tag=PosTag.NOUN),
         ]
     )

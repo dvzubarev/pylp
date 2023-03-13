@@ -463,8 +463,7 @@ class EnInflector(BaseInflector):
 
             elif (
                 mod_obj.pos_tag == PosTag.PARTICIPLE and mod_obj.tense in (None, WordTense.PRES)
-            ) or mod_obj.pos_tag == PosTag.PARTICIPLE_ADVERB:
-                # The second condition is a legacy of erroneous convertation from UD
+            ) or mod_obj.pos_tag == PosTag.GERUND:
                 # check exceptions
                 if (
                     verb_excp_form := self._verb_excep_dict.get(current_lemma)

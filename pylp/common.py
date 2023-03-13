@@ -90,16 +90,17 @@ class PosTag(enum.IntEnum):
     ADP               = 10
     PART              = 11
     ADV               = 12
-    CCONJ             = 13
-    SCONJ             = 14
-    SYM               = 15
-    AUX               = 16
-    DET               = 17
-    X                 = 18
-    INTJ              = 19
-    CONJ              = 20
-    PUNCT             = 21
-    UNDEF             = 22
+    GERUND            = 13
+    CCONJ             = 14
+    SCONJ             = 15
+    SYM               = 16
+    AUX               = 17
+    DET               = 18
+    X                 = 19
+    INTJ              = 20
+    CONJ              = 21
+    PUNCT             = 22
+    UNDEF             = 23
 
 
 

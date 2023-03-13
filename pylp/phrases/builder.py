@@ -506,7 +506,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                     lp.PosTag.PROPN,
                     lp.PosTag.PARTICIPLE,
                     lp.PosTag.PARTICIPLE_SHORT,
-                    lp.PosTag.PARTICIPLE_ADVERB,
+                    lp.PosTag.GERUND,
                     lp.PosTag.ADJ_SHORT,
                 ]
             )

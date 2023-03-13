@@ -67,10 +67,12 @@ def _assign_morph_features(word_obj: WordObj, morph_feats, pos_tag):
 
 def _adjust_verb(pos_tag, morph_feats):
     if 'VerbForm' in morph_feats:
-        if morph_feats['VerbForm'] in ('Ger', 'Part'):
+        if morph_feats['VerbForm'] == 'Part':
             if 'Variant' in morph_feats and morph_feats['Variant'] == 'Short':
                 return common.PosTag.PARTICIPLE_SHORT
             return common.PosTag.PARTICIPLE
+        if morph_feats['VerbForm'] == 'Ger':
+            return common.PosTag.GERUND
         if morph_feats['VerbForm'] == 'Conv':
             return common.PosTag.PARTICIPLE_ADVERB
     return pos_tag
