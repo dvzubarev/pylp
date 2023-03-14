@@ -72,6 +72,7 @@ class SyntLink(enum.IntEnum):
     REPARANDUM = 34
     VOCATIVE   = 35
     XCOMP      = 36
+    UNDEF      = 37
 
 SYNT_LINK_DICT = _make_dict_for_enum(SyntLink)
 

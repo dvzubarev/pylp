@@ -143,7 +143,9 @@ def fill_syntax_info(
     if head is None and conllu_head is not None:
         head = conllu_head
     if rel is None and conllu_deprel and conllu_deprel != '_':
-        rel = common.SYNT_LINK_DICT[conllu_deprel.split(':', 1)[0].upper()]
+        rel = common.SYNT_LINK_DICT.get(
+            conllu_deprel.split(':', 1)[0].upper(), common.SyntLink.UNDEF
+        )
 
     if head is not None and rel is not None:
         head -= 1
