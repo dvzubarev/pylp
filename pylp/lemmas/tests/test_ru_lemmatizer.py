@@ -131,6 +131,20 @@ def test_ru_lem7(mp_lemmatizer):
     # assert lemma.lower() == 'ивановa'
 
 
+def test_ru_propn1(general_lemmatizer):
+    word1 = WordObj(form='Инчхоне', pos_tag=PosTag.PROPN, case=WordCase.LOC, gender=WordGender.MASC)
+    lemma = general_lemmatizer.produce_lemma(word1)
+    assert lemma == 'Инчхон'
+
+    word1 = WordObj(form='ООН', pos_tag=PosTag.PROPN)
+    lemma = general_lemmatizer.produce_lemma(word1)
+    assert lemma == 'ООН'
+
+    word1 = WordObj(form='USA', pos_tag=PosTag.PROPN)
+    lemma = general_lemmatizer.produce_lemma(word1)
+    assert lemma == 'USA'
+
+
 def test_ru_lem_comp_num_1(mp_lemmatizer):
     word1 = WordObj(form='пятьсот', pos_tag=PosTag.NUM)
     lemma = mp_lemmatizer.produce_lemma(word1)

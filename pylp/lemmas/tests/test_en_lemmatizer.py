@@ -36,7 +36,7 @@ def mp_lemmatizer(request):
 
 
 def test_en_lem_1(mp_lemmatizer):
-    word1 = WordObj(form='Fears', pos_tag=PosTag.PROPN, number=WordNumber.PLUR)
+    word1 = WordObj(form='Fears', pos_tag=PosTag.NOUN, number=WordNumber.PLUR)
 
     lemma = mp_lemmatizer.produce_lemma(word1)
     assert lemma == 'fear'

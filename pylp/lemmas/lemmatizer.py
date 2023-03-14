@@ -134,7 +134,15 @@ class Lemmatizer(AbcLemmatizer):
             return most_frequent[0]
         return None
 
-    def produce_lemma(self, word_obj: WordObj, _=None) -> str | None:
+    def _finalize_lemma(self, lemma, word_obj: WordObj):
+        if word_obj.pos_tag == lp.PosTag.PROPN:
+            assert word_obj.form is not None, "Logic error 1333"
+            if word_obj.form.isupper():
+                return lemma.upper()
+            return lemma.title()
+        return lemma
+
+    def _produce_lemma_impl(self, word_obj: WordObj, _=None) -> str | None:
         if word_obj.form is None:
             return None
 
@@ -148,6 +156,14 @@ class Lemmatizer(AbcLemmatizer):
             return best_variants[0][0]
 
         return self._dispatch_to_lang_lemmatizier(word_obj, best_variants)
+
+    def produce_lemma(
+        self, word_obj: WordObj, lemmas_freq_list: List[Tuple[str, int]] | None = None
+    ) -> str | None:
+        lemma = self._produce_lemma_impl(word_obj, lemmas_freq_list)
+        if lemma is not None:
+            return self._finalize_lemma(lemma, word_obj)
+        return None
 
     def __call__(self, doc_obj: lp_doc.Doc):
         for sent in doc_obj:
