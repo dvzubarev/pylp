@@ -3,15 +3,37 @@
 
 import pytest
 
-from pylp.lemmas.ru_lemmatizer import RuLemmatizer
+from pylp.lemmas.lemmatizer import Lemmatizer
+from pylp.lemmas.ru_lemmatizer import RuLemmatizer, RuLemmatizerOpts
 from pylp import lp_doc
-from pylp.common import Lang, PosTag, SyntLink, WordGender, WordNumber
+from pylp.common import Lang, PosTag, SyntLink, WordCase, WordGender, WordNumber, WordDegree
 from pylp.word_obj import WordObj
 
 
 @pytest.fixture
 def ru_lemmatizer():
     return RuLemmatizer()
+
+
+@pytest.fixture
+def ru_lem_with_fix_feats():
+    return RuLemmatizer(RuLemmatizerOpts(fix_feats=True))
+
+
+@pytest.fixture
+def general_lemmatizer():
+    return Lemmatizer()
+
+
+@pytest.fixture(
+    scope='module',
+    params=['ru', 'general'],
+    ids=['RuLemmatizer', 'GeneralLemmatizier'],
+)
+def mp_lemmatizer(request):
+    if request.param == 'ru':
+        return RuLemmatizer()
+    return Lemmatizer()
 
 
 def _make_doc_obj(sents) -> lp_doc.Doc:
@@ -24,39 +46,131 @@ def _make_doc_obj(sents) -> lp_doc.Doc:
     return doc
 
 
-def test_ru_lem1(ru_lemmatizer):
-    word1 = WordObj(lemma='прекрасть', form='прекрасна', pos_tag=PosTag.ADJ_SHORT)
+def test_ru_lem1(mp_lemmatizer):
+    word1 = WordObj(form='прекрасна', pos_tag=PosTag.ADJ_SHORT)
 
-    doc = _make_doc_obj([[word1]])
-
-    ru_lemmatizer(doc)
-    word_fixed = doc[0][0]
-    assert word_fixed.lemma == 'прекрасный'
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'прекрасный'
 
 
-def test_ru_lem2(ru_lemmatizer):
-    word1 = WordObj(lemma='тратить', form='Потрачено', pos_tag=PosTag.PARTICIPLE_SHORT)
+def test_ru_lem2(mp_lemmatizer):
+    word1 = WordObj(form='Потрачено', pos_tag=PosTag.PARTICIPLE_SHORT)
 
-    doc = _make_doc_obj([[word1]])
-
-    ru_lemmatizer(doc)
-    word_fixed = doc[0][0]
-    assert word_fixed.lemma == 'потраченный'
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'потраченный'
 
 
-def test_ru_lem3(ru_lemmatizer):
-    word1 = WordObj(lemma='впустой', form='впустую', pos_tag=PosTag.ADV)
+def test_ru_lem3(mp_lemmatizer):
+    word1 = WordObj(form='впустую', pos_tag=PosTag.ADV)
 
-    doc = _make_doc_obj([[word1]])
-
-    ru_lemmatizer(doc)
-    word_fixed = doc[0][0]
-    assert word_fixed.lemma == 'впустую'
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'впустую'
 
 
-def test_ru_lem4(ru_lemmatizer):
+def test_ru_lem4(mp_lemmatizer):
     word1 = WordObj(
-        lemma='выходная',
+        form='выходные',
+        pos_tag=PosTag.NOUN,
+        # Wrong feats
+        gender=WordGender.FEM,
+        number=WordNumber.SING,
+    )
+
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'выходной'
+
+
+def test_ru_lem5(mp_lemmatizer):
+    # войска is wrongly lemmatized to войска in SynTagRus
+    # But its correctly lemmatized to войско in Taiga
+    word1 = WordObj(
+        form='войска',
+        pos_tag=PosTag.NOUN,
+        case=WordCase.ACC,
+        number=WordNumber.PLUR,
+        gender=WordGender.NEUT,
+    )
+
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'войско'
+
+    word1 = WordObj(
+        form='погранвойсках',
+        pos_tag=PosTag.NOUN,
+        case=WordCase.LOC,
+        number=WordNumber.PLUR,
+        gender=WordGender.NEUT,
+    )
+
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'погранвойско'
+
+
+def test_ru_lem_comp_num_1(mp_lemmatizer):
+    word1 = WordObj(form='пятьсот', pos_tag=PosTag.NUM)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'пятьсот'
+
+    word1 = WordObj(form='трехсот', pos_tag=PosTag.NUM)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'триста'
+
+
+def test_ru_lem_comp_adj_1(mp_lemmatizer):
+    word1 = WordObj(form='Быстрее', pos_tag=PosTag.ADJ)
+    word1.degree = WordDegree.CMP
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'быстрый'
+
+    word2 = WordObj(form='высочайшая', pos_tag=PosTag.ADJ)
+    word2.degree = WordDegree.SUP
+    lemma = mp_lemmatizer.produce_lemma(word2)
+    assert lemma == 'высокий'
+
+
+def test_ru_lem_comp_adj_2(mp_lemmatizer):
+    word1 = WordObj(form='девяностых', pos_tag=PosTag.ADJ)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'девяностый'
+
+
+def test_ru_lem_infn_1(mp_lemmatizer):
+    word1 = WordObj(form='принимать', pos_tag=PosTag.VERB)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'принимать'
+
+
+def test_ru_lem6(mp_lemmatizer):
+    word1 = WordObj(form='Саудовской', pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD)
+
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'саудовский'
+
+
+def test_punct_general(general_lemmatizer):
+    word1 = WordObj(form=',', pos_tag=PosTag.PUNCT)
+    lemma = general_lemmatizer.produce_lemma(word1)
+    assert lemma == ','
+
+    word1 = WordObj(form=',****##***,', pos_tag=PosTag.PUNCT)
+    lemma = general_lemmatizer.produce_lemma(word1)
+    assert lemma == ',****##***,'
+
+
+def test_ru_feats_fix_1(ru_lem_with_fix_feats):
+    word1 = WordObj(form='силы', pos_tag=PosTag.NOUN, number=WordNumber.PLUR)
+
+    doc = _make_doc_obj([[word1]])
+
+    ru_lem_with_fix_feats(doc)
+    word_fixed = doc[0][0]
+    assert word_fixed.lemma == 'сила'
+    # shouldn't fix word number to SING
+    assert word_fixed.number == WordNumber.PLUR
+
+
+def test_ru_feats_fix_2(ru_lem_with_fix_feats):
+    word1 = WordObj(
         form='выходные',
         pos_tag=PosTag.NOUN,
         gender=WordGender.FEM,
@@ -65,67 +179,8 @@ def test_ru_lem4(ru_lemmatizer):
 
     doc = _make_doc_obj([[word1]])
 
-    ru_lemmatizer(doc)
+    ru_lem_with_fix_feats(doc)
     word_fixed = doc[0][0]
     assert word_fixed.lemma == 'выходной'
     assert word_fixed.gender == WordGender.MASC
     assert word_fixed.number == WordNumber.PLUR
-
-
-def test_ru_lem5(ru_lemmatizer):
-    word1 = WordObj(lemma='сила', form='силы', pos_tag=PosTag.NOUN, number=WordNumber.PLUR)
-
-    doc = _make_doc_obj([[word1]])
-
-    ru_lemmatizer(doc)
-    word_fixed = doc[0][0]
-    # shouldn't fix word number to SING
-    assert word_fixed.number == WordNumber.PLUR
-
-
-def test_ru_lem6(ru_lemmatizer):
-    word1 = WordObj(
-        lemma='саудовский', form='Саудовской', pos_tag=PosTag.PROPN, synt_link=SyntLink.AMOD
-    )
-    word2 = WordObj(lemma='аравия', form='Аравии', pos_tag=PosTag.PROPN, synt_link=SyntLink.OBL)
-
-    doc = _make_doc_obj([[word1, word2]])
-
-    ru_lemmatizer(doc)
-    word_fixed = doc[0][0]
-    assert word_fixed.pos_tag == PosTag.ADJ
-
-
-def test_ru_lem7(ru_lemmatizer):
-    word1 = WordObj(
-        lemma='соединненный',
-        form='Соединненных',
-        pos_tag=PosTag.PROPN,
-        synt_link=SyntLink.COMPOUND,
-        number=WordNumber.SING,
-    )
-    word2 = WordObj(
-        lemma='штат',
-        form='Штатах',
-        pos_tag=PosTag.PROPN,
-        synt_link=SyntLink.COMPOUND,
-        number=WordNumber.SING,
-    )
-    word3 = WordObj(
-        lemma='америка',
-        form='Америки',
-        pos_tag=PosTag.PROPN,
-        synt_link=SyntLink.NMOD,
-        number=WordNumber.SING,
-    )
-
-    doc = _make_doc_obj([[word1, word2, word3]])
-
-    ru_lemmatizer(doc)
-    word_fixed_1 = doc[0][0]
-    assert word_fixed_1.pos_tag == PosTag.ADJ
-    assert word_fixed_1.number == WordNumber.PLUR
-
-    word_fixed_2 = doc[0][1]
-    assert word_fixed_2.pos_tag == PosTag.PROPN
-    assert word_fixed_2.number == WordNumber.PLUR

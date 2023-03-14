@@ -4,7 +4,7 @@
 import gzip
 import json
 import importlib.resources
-from typing import List, Mapping, Optional
+from typing import List, MutableMapping, Mapping, Optional
 
 import pymorphy2
 
@@ -401,7 +401,7 @@ class EnInflector(BaseInflector):
                 gf, object_hook=lambda d: d if 'pap' not in d else VerbExcpForms.from_json(d)
             )
 
-        self._noun_excep_dict: Mapping[str, str] = excep_dict['noun']
+        self._noun_excep_dict: MutableMapping[str, str] = excep_dict['noun']
         # TODO there is no these words in spacy's en_lemma_exc.json
         self._noun_excep_dict['woman'] = 'women'
         self._verb_excep_dict: Mapping[str, VerbExcpForms] = excep_dict['verb']

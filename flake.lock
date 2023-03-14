@@ -22,11 +22,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1678116281,
-        "narHash": "sha256-AuKQXGN2dNBbZAhUC0DKgeSHGMiUVO7vltUV6DcPPfs=",
+        "lastModified": 1678357186,
+        "narHash": "sha256-GDGKZjYnyqmL8j5v2FA9I9/96ZfAaSQsS1K0BXC0R5c=",
         "ref": "refs/heads/master",
-        "rev": "d8e59f8f4a16c847f2b49b1845fdb71627f9a353",
-        "revCount": 18,
+        "rev": "aafba5b1dee3923a530c08f1a40fd15cb4397a80",
+        "revCount": 19,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/pyexbase"
       },
@@ -46,11 +46,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1678115560,
-        "narHash": "sha256-MS7mvJveprGS4ugm1k4YzSoEC/GGCe6jcAsuLC532Z0=",
+        "lastModified": 1678752933,
+        "narHash": "sha256-aXrydUzLoQ261Y+YKt0SOgmKwvmZXn2TrqKYMOdOYtg=",
         "ref": "refs/heads/master",
-        "rev": "5c1b3e1f7f12eb6662bedb53c50dac82febed0a4",
-        "revCount": 149,
+        "rev": "705eb1f1df890ccf2feb0e6d1005315fdffeeee4",
+        "revCount": 166,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },

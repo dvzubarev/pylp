@@ -39,19 +39,21 @@ class WordObj:
     def __init__(
         self,
         *,
-        pos_tag=common.PosTag.UNDEF,
-        lemma=None,
-        form=None,
-        offset=None,
-        length=None,
-        parent_offs=None,
-        synt_link=None,
-        lang=None,
-        number=None,
-        gender=None,
-        tense=None,
-        case=None,
-        voice=None,
+        pos_tag: common.PosTag = common.PosTag.UNDEF,
+        lemma: str | None = None,
+        form: str | None = None,
+        offset: int | None = None,
+        length: int | None = None,
+        parent_offs: int | None = None,
+        synt_link: common.SyntLink | None = None,
+        lang: common.Lang | None = None,
+        number: common.WordNumber | None = None,
+        gender: common.WordGender | None = None,
+        tense: common.WordTense | None = None,
+        person: common.WordPerson | None = None,
+        case: common.WordCase | None = None,
+        voice: common.WordVoice | None = None,
+        degree: common.WordDegree | None = None,
     ) -> None:
         # basic info
         self.pos_tag: common.PosTag = pos_tag
@@ -76,8 +78,8 @@ class WordObj:
         self.gender: Optional[common.WordGender] = gender
         self.case: Optional[common.WordCase] = case
         self.tense: Optional[common.WordTense] = tense
-        self.person: Optional[common.WordPerson] = None
-        self.degree: Optional[common.WordDegree] = None
+        self.person: Optional[common.WordPerson] = person
+        self.degree: Optional[common.WordDegree] = degree
         self.aspect: Optional[common.WordAspect] = None
         self.voice: Optional[common.WordVoice] = voice
         self.mood: Optional[common.WordMood] = None
