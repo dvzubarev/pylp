@@ -2,12 +2,11 @@
 # coding: utf-8
 
 import logging
+import pickle
 from typing import List, Set, Tuple
 import os
 import gzip
 import json
-
-import wn
 
 from pylp import lp_doc
 from pylp.lemmas.abc_lemmatizer import AbcLemmatizer
@@ -16,13 +15,13 @@ from pylp.common import PosTag, WordNumber, WordDegree, WordPerson, WordTense
 
 
 _WN_POS_TAG_MAPPING = {
-    PosTag.PROPN: ['n'],
-    PosTag.NOUN: ['n'],
-    PosTag.VERB: ['v'],
-    PosTag.PARTICIPLE: ['v'],
-    PosTag.GERUND: ['v'],
-    PosTag.ADJ: ['a', 's'],
-    PosTag.ADV: ['r'],
+    PosTag.PROPN: 'n',
+    PosTag.NOUN: 'n',
+    PosTag.VERB: 'v',
+    PosTag.PARTICIPLE: 'v',
+    PosTag.GERUND: 'v',
+    PosTag.ADJ: 'a',
+    PosTag.ADV: 'r',
 }
 _NOUN_PLURAL_RULES = [
     ("ches", "ch"),
@@ -65,11 +64,11 @@ _ADJ_SUP_RULES = [
 
 class EnLemmatizer(AbcLemmatizer):
     def __init__(self, **_):
-        pylp_res_dir = os.environ.get('PYLP_RESOURCES_DIR')
-        if pylp_res_dir is None:
+        self._res_dir = os.environ.get('PYLP_RESOURCES_DIR')
+        if self._res_dir is None:
             raise RuntimeError("Env var PYLP_RESOURCES_DIR is not set!")
 
-        with gzip.open(f'{pylp_res_dir}/lemma.en.exc.json.gz') as fp:
+        with gzip.open(f'{self._res_dir}/lemma.en.exc.json.gz') as fp:
             self._excep_dict = json.load(fp)
         mapping = {'adj': PosTag.ADJ, 'adv': PosTag.ADV, 'noun': PosTag.NOUN, 'verb': PosTag.VERB}
         self._excep_dict = {
@@ -77,13 +76,13 @@ class EnLemmatizer(AbcLemmatizer):
             for k, v in self._excep_dict.items()
         }
 
-        wn.config.data_directory = f'{pylp_res_dir}/wn'
-        self._wordnet = None
+        self._known_lemmas = None
 
-    def _get_wordnet(self):
-        if self._wordnet is None:
-            self._wordnet = wn.Wordnet('oewn:2021')
-        return self._wordnet
+    def _get_known_lemmas(self):
+        if self._known_lemmas is None:
+            with gzip.open(f'{self._res_dir}/lemma.en.known_lemmas.pickle.gz') as fp:
+                self._known_lemmas = pickle.load(fp)
+        return self._known_lemmas
 
     def _apply_rules(self, word, rules):
         candidates = []
@@ -168,12 +167,11 @@ class EnLemmatizer(AbcLemmatizer):
             if cur_lemma is not None:
                 return cur_lemma
 
+        known_lemmas = self._get_known_lemmas()
         wn_pos = _WN_POS_TAG_MAPPING.get(word_obj.pos_tag, [])
         for candidate in candidates:
-            for p in wn_pos:
-                known_words = self._get_wordnet().words(candidate, pos=p)
-                if known_words:
-                    return candidate
+            if (wn_pos, candidate) in known_lemmas:
+                return candidate
 
         return candidates[0]
 
