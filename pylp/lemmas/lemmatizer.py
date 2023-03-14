@@ -66,7 +66,7 @@ class Lemmatizer(AbcLemmatizer):
         pos_tag = word_obj.pos_tag
         variants = self._lemmas_dict.get((token_str, pos_tag))
         logging.debug(
-            "GeneralLemmatizer: form=%s; pos_tag=%s; vars=%s; variants=%s",
+            "form=%s; pos_tag=%s; vars=%s; variants=%s",
             form,
             pos_tag,
             len(variants) if variants is not None else 0,
@@ -100,7 +100,7 @@ class Lemmatizer(AbcLemmatizer):
 
         best_variants = list(best_variants.items())
         logging.debug(
-            "GeneralLemmatizer: form=%s; pos_tag=%s; vars=%s; best_variants=%s",
+            "form=%s; pos_tag=%s; vars=%s; best_variants=%s",
             form,
             pos_tag,
             len(best_variants),

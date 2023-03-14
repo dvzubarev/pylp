@@ -162,7 +162,7 @@ class RuLemmatizer(AbcLemmatizer):
 
         results = self._parse_word(word_obj.form)
         logging.debug(
-            "RuLemmatizer: form=%s; pos_tag=%s; vars=%s; variants=%s",
+            "form=%s; pos_tag=%s; vars=%s; variants=%s",
             word_obj.form,
             word_obj.pos_tag,
             len(results),
@@ -170,7 +170,7 @@ class RuLemmatizer(AbcLemmatizer):
         )
         best_morphy_variants = self._find_matching_res(morphy_tag, results, word_obj)
         logging.debug(
-            "RuLemmatizer: form=%s; pos_tag=%s; vars=%s; best_variants=%s",
+            "form=%s; pos_tag=%s; vars=%s; best_variants=%s",
             word_obj.form,
             word_obj.pos_tag,
             len(best_morphy_variants),
@@ -196,15 +196,18 @@ class RuLemmatizer(AbcLemmatizer):
             return self._get_lemma(morphy_res, morphy_tag), morphy_res
 
         cur_most_freq = 0
-        cur_lemma = list(unique_lemmas)[0]
+        cur_lemma = None
         for lemma_var, cnt in lemmas_freq_list:
+            lemma_var = lemma_var.lower()
             if lemma_var in unique_lemmas and cnt > cur_most_freq:
                 cur_lemma = lemma_var
                 cur_most_freq = cnt
 
-        # TODO
+        if cur_lemma is not None:
+            # TODO how to find morphy variant of this cur_lemma
+            return cur_lemma, best_morphy_variants[0]
         first_res = best_morphy_variants[0]
-        return cur_lemma, first_res
+        return self._get_lemma(first_res, morphy_tag), first_res
 
     def produce_lemma(
         self, word_obj: WordObj, lemmas_freq_list: List[Tuple[str, int]] | None = None

@@ -109,7 +109,7 @@ class EnLemmatizer(AbcLemmatizer):
             lemma := exceptions_dict.get(word)
         ) is not None:
             logging.debug(
-                "EnLemmatizer: form=%s; pos_tag=%s; exception_found=%s",
+                "form=%s; pos_tag=%s; exception_found=%s",
                 word_obj.form,
                 word_obj.pos_tag,
                 lemma,
@@ -136,7 +136,7 @@ class EnLemmatizer(AbcLemmatizer):
                 candidates, unique_candidates = self._apply_rules(word, _VERB_GERUND_RULES)
 
         logging.debug(
-            "EnLemmatizer: form=%s; pos_tag=%s; candidates=%s",
+            "form=%s; pos_tag=%s; candidates=%s",
             word_obj.form,
             word_obj.pos_tag,
             candidates,
@@ -181,7 +181,7 @@ class EnLemmatizer(AbcLemmatizer):
 
                 word = word_obj.form
                 if not word:
-                    logging.warning("Lemmatizer: Empty form in the word %s", word_obj)
+                    logging.warning("Empty form in the word %s", word_obj)
                     continue
                 lemma = self.produce_lemma(word_obj)
 

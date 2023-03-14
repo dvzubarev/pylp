@@ -106,6 +106,31 @@ def test_ru_lem5(mp_lemmatizer):
     assert lemma == 'погранвойско'
 
 
+def test_ru_lem6(mp_lemmatizer):
+    word1 = WordObj(form='Саудовской', pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD)
+
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma == 'саудовский'
+
+
+def test_ru_lem7(mp_lemmatizer):
+    word1 = WordObj(form='Иванова', pos_tag=PosTag.PROPN, case=WordCase.GEN, gender=WordGender.MASC)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma.lower() == 'иванов'
+
+    # feats error; wrong gender
+    word1 = WordObj(form='Иванова', pos_tag=PosTag.PROPN, case=WordCase.GEN, gender=WordGender.FEM)
+    lemma = mp_lemmatizer.produce_lemma(word1)
+    assert lemma.lower() == 'иванов'
+
+    # Does not work with pymorphy
+    # old dictionaries?
+    # https://github.com/pymorphy2/pymorphy2/issues/160
+    # word1 = WordObj(form='Иванова', pos_tag=PosTag.PROPN, case=WordCase.NOM, gender=WordGender.FEM)
+    # lemma = mp_lemmatizer.produce_lemma(word1)
+    # assert lemma.lower() == 'ивановa'
+
+
 def test_ru_lem_comp_num_1(mp_lemmatizer):
     word1 = WordObj(form='пятьсот', pos_tag=PosTag.NUM)
     lemma = mp_lemmatizer.produce_lemma(word1)
@@ -138,13 +163,6 @@ def test_ru_lem_infn_1(mp_lemmatizer):
     word1 = WordObj(form='принимать', pos_tag=PosTag.VERB)
     lemma = mp_lemmatizer.produce_lemma(word1)
     assert lemma == 'принимать'
-
-
-def test_ru_lem6(mp_lemmatizer):
-    word1 = WordObj(form='Саудовской', pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD)
-
-    lemma = mp_lemmatizer.produce_lemma(word1)
-    assert lemma == 'саудовский'
 
 
 def test_punct_general(general_lemmatizer):
