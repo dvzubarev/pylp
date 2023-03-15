@@ -84,7 +84,7 @@ class RuLemmatizer(AbcLemmatizer):
 
         self._morph = None
         self._parsed_cache = {}
-        self._max_cache_size = 5000
+        self._max_cache_size = 20_000
 
     def _get_pymorphy(self):
         if self._morph is None:
@@ -141,6 +141,7 @@ class RuLemmatizer(AbcLemmatizer):
         return pymorphy_res.normal_form
 
     def _parse_word(self, word):
+        word = word.lower()
         if word not in self._parsed_cache:
             if len(self._parsed_cache) > self._max_cache_size:
                 self._parsed_cache.clear()

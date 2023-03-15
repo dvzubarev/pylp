@@ -51,7 +51,7 @@ class Lemmatizer(AbcLemmatizer):
             lp.Lang.EN: EnLemmatizer(*args, **kwargs),
         }
 
-        self._min_occ_cnt = 3
+        self._min_occ_cnt = 2
 
     def _should_early_dispatch(self, word_obj: lp_doc.WordObj) -> lp.Lang | None:
         if word_obj.pos_tag in (lp.PosTag.PARTICIPLE_SHORT, lp.PosTag.PARTICIPLE):
@@ -130,7 +130,7 @@ class Lemmatizer(AbcLemmatizer):
             return lemma
         if variants is not None:
             # select from dict_variants the most frequent one
-            most_frequent = max(variants, key=lambda t: -t[1])
+            most_frequent = max(variants, key=lambda t: t[1])
             return most_frequent[0]
         return None
 
@@ -152,9 +152,13 @@ class Lemmatizer(AbcLemmatizer):
         if not best_variants:
             return self._dispatch_to_lang_lemmatizier(word_obj)
 
-        if len(best_variants) == 1 and best_variants[0][1] > self._min_occ_cnt:
+        max_cnt = max(best_variants, key=lambda t: t[1])[1]
+        best_frequent_variants = [var for var in best_variants if var[1] / max_cnt > 0.05]
+
+        if len(best_frequent_variants) == 1 and best_frequent_variants[0][1] >= self._min_occ_cnt:
             return best_variants[0][0]
 
+        # pass all variants to lang lemmatizer, so he choose by itself
         return self._dispatch_to_lang_lemmatizier(word_obj, best_variants)
 
     def produce_lemma(
