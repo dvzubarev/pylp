@@ -183,7 +183,9 @@ WORD_VOICE_DICT = _make_dict_for_enum(WordVoice)
 class WordMood(enum.IntEnum):
     IND = 0
     IMP = 1
+    #Is it CND from v1?
     CND = 2
+    SUB = 3
 WORD_MOOD_DICT = _make_dict_for_enum(WordMood)
 
 class WordNumType(enum.IntEnum):
