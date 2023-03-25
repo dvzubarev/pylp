@@ -190,7 +190,7 @@ class ConverterConllUDV1:
                     begin = text.find(word_obj.form, cur_text_pos)
                     if begin == -1:
                         raise RuntimeError(
-                            f"Failed to find form {word_obj.form} in text: {text[cur_text_pos: 50]}"
+                            f"Failed to find form {word_obj.form} in text: {text[cur_text_pos: cur_text_pos+50]}"
                         )
                     word_obj.offset = begin
                     assert word_obj.form is not None, "not initialized form"
