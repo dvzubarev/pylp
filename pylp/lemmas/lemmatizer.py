@@ -114,17 +114,19 @@ class Lemmatizer(AbcLemmatizer):
         variants: List[Tuple[str, int]] | None = None,
         word_lang: lp.Lang | None = None,
     ) -> str | None:
+        form = word_obj.form
+        assert form is not None, 'logic error 3eea'
         if word_lang is None:
-            word_lang = libpyexbase.lang_of_word(word_obj.form)
+            word_lang = libpyexbase.lang_of_word(form)
             assert word_lang is not None, "Logic error 484249"
 
         if word_lang == lp.Lang.UNDEF:
-            return word_obj.form
+            return form
 
         lemmatizer = self._lang_lemmatizers.get(word_lang)
         if lemmatizer is None:
             logging.warning("Lemmatizer: Lang %s is not supported", word_lang)
-            return word_obj.form
+            return form.lower()
         lemma = lemmatizer.produce_lemma(word_obj, variants)
         if lemma is not None:
             return lemma
@@ -132,7 +134,7 @@ class Lemmatizer(AbcLemmatizer):
             # select from dict_variants the most frequent one
             most_frequent = max(variants, key=lambda t: t[1])
             return most_frequent[0]
-        return None
+        return form.lower()
 
     def _finalize_lemma(self, lemma, word_obj: WordObj):
         if word_obj.pos_tag == lp.PosTag.PROPN:
