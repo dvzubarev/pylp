@@ -20,6 +20,7 @@ from pylp.common import (
 )
 from pylp import lp_doc
 from pylp.phrases.phrase import Phrase
+from pylp.phrases.builder import MWE_RELS
 from pylp.word_obj import WordObj
 
 
@@ -174,7 +175,13 @@ class RuInflector(BaseInflector):
             return None, None
 
         case = self._case_mapping[word_obj.case]
-        form = self._pymorphy_inflect(word, "NOUN", {number, case})
+        feats = {number, case}
+        if (
+            word_obj.gender is not None
+            and (gender := self._gender2pymorphy(word_obj.gender)) is not None
+        ):
+            feats.add(gender)
+        form = self._pymorphy_inflect(word, "NOUN", feats)
         return form, word_obj.case
 
     def _resolve_conj_link(self, pos: int, word_obj: WordObj, sent: lp_doc.Sent):
@@ -199,12 +206,8 @@ class RuInflector(BaseInflector):
             mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
             link = self._resolve_conj_link(mod_sent_pos, mod_obj, sent)
 
-        if link in (
-            SyntLink.NMOD,
-            SyntLink.COMPOUND,
-        ):
+        if link == SyntLink.NMOD or link in MWE_RELS:
             form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
-
             if case is not None:
                 self._cases[mod_pos] = case
         elif link == SyntLink.NUMMOD:
@@ -215,12 +218,6 @@ class RuInflector(BaseInflector):
                     phrase_words[head_pos] = head_form
                 if case is not None:
                     self._cases[head_pos] = case
-
-        elif link in (SyntLink.FIXED, SyntLink.FLAT, SyntLink.APPOS):
-            # see test_ru_propn_inflect4 ['красивая', 'Валентина', 'Иванова']
-            gender = self._gender2pymorphy(head_obj.gender)
-            if gender is not None:
-                form = self._pymorphy_inflect(phrase_words[mod_pos], "NOUN", {gender})
 
         if mod_obj.pos_tag == PosTag.PROPN:
             if form is None:

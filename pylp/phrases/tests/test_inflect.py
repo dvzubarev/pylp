@@ -493,13 +493,34 @@ def test_ru_propn_inflect4():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.ADJ),
-            WordObj(pos_tag=PosTag.PROPN, gender=WordGender.FEM),
-            WordObj(pos_tag=PosTag.PROPN, gender=WordGender.FEM, synt_link=SyntLink.FLAT),
+            WordObj(pos_tag=PosTag.PROPN, gender=WordGender.FEM, case=WordCase.NOM),
+            WordObj(
+                pos_tag=PosTag.PROPN,
+                gender=WordGender.FEM,
+                synt_link=SyntLink.FLAT,
+                case=WordCase.NOM,
+            ),
         ]
     )
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words() == ['красивая', 'Валентина', 'Иванова']
+
+
+def test_ru_propn_inflect5():
+    p = Phrase(
+        head_pos=0, sent_pos_list=[0, 1, 2], words=['шляпа', 'иван', 'иванов'], deps=[0, -1, -1]
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN),
+            WordObj(pos_tag=PosTag.PROPN, synt_link=SyntLink.NMOD, case=WordCase.GEN),
+            WordObj(pos_tag=PosTag.PROPN, synt_link=SyntLink.FLAT, case=WordCase.GEN),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['шляпа', 'Ивана', 'Иванова']
 
 
 def test_simple_en_pres_part_inflect_1():
