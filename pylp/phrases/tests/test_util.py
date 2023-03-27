@@ -4,10 +4,20 @@
 import copy
 from pylp import lp_doc
 
-from pylp.phrases.builder import Phrase
-from pylp.phrases.util import replace_words_with_phrases, add_phrases_to_doc, make_phrases
+from pylp.phrases.builder import (
+    Phrase,
+    PhraseBuilder,
+    PhraseBuilderOpts,
+)
+from pylp.phrases.util import replace_words_with_phrases, add_phrases_to_doc
 import pylp.common as lp
 from pylp.word_obj import WordObj
+
+
+def make_phrases(sent: lp_doc.Sent, MaxN):
+    builder = PhraseBuilder(MaxN, PhraseBuilderOpts())
+    phrases = builder.build_phrases_for_sent(sent)
+    return phrases
 
 
 def _mkw(lemma, link, PoS=lp.PosTag.UNDEF, link_kind=None):
@@ -105,7 +115,7 @@ def test_replace():
 
     phrases = make_phrases(sent, 3)
     sent_words = copy.copy(words)
-    new_sent = replace_words_with_phrases(sent_words, phrases)
+    new_sent = replace_words_with_phrases(sent_words, phrases, allow_overlapping_phrases=True)
     print(phrases)
     print(new_sent)
     assert len(new_sent) == 2

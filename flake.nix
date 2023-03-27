@@ -38,7 +38,7 @@
               pkgs.pyright
               pypkgs.pylint
               pypkgs.black
-              pypkgs.jupyter_server
+              pypkgs.ipykernel
               pypkgs.debugpy
             ];
 

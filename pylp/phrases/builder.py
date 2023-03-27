@@ -239,11 +239,17 @@ class BasicPhraseBuilder:
 
     def _init_word_index(self, pos: int, word_obj: WordObj, words_index: PhrasesIndexType):
         try:
-            phrase = Phrase.from_word(pos, word_obj)
             cur_word_index = [[] for _ in range(self._max_n)]
             words_index[pos] = cur_word_index
-            # init words_index's level 0
-            cur_word_index[0] = [phrase]
+            if word_obj.mwe is not None:
+                mwe_phrase: Phrase = word_obj.mwe
+                if mwe_phrase.size() > self._max_n:
+                    return
+                cur_word_index[mwe_phrase.size() - 1] = [mwe_phrase]
+            else:
+                phrase = Phrase.from_word(pos, word_obj)
+                # init words_index's level 0
+                cur_word_index[0] = [phrase]
         except RuntimeError as ex:
             logging.warning("Failed to create phrase from word_obj: %s", ex)
 
@@ -447,7 +453,10 @@ class BasicPhraseBuilder:
                 continue
             for l in range(1, self._max_n):
                 for p in head_phrases[l]:
-                    all_phrases.append(p)
+                    pos = p.sent_hp()
+                    if self._test_head(sent[pos], pos, sent, all_mods_index):
+                        # Some mwe can be on levels > 0, we have to filter them
+                        all_phrases.append(p)
 
         return all_phrases
 
@@ -474,18 +483,22 @@ class BasicPhraseBuilder:
     def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         raise NotImplementedError("_test_head")
 
-    def build_phrases_for_sent(self, sent: lp_doc.Sent):
+    def build_phrases_for_sent(self, sent: lp_doc.Sent) -> List[Phrase]:
         if len(sent) > 4096:
             raise RuntimeError("Sent size limit!")
         return self._build_phrases_impl(sent)
 
-    def build_phrases_for_doc(self, doc: lp_doc.Doc):
-        for sent in doc:
-            phrases = self.build_phrases_for_sent(sent)
-            sent.set_phrases(phrases)
 
-
-class PhraseBuilderOpts(BasicPhraseBuilderOpts):
+# Multi word expressions
+MWE_RELS = frozenset(
+    [
+        lp.SyntLink.COMPOUND,
+        lp.SyntLink.FIXED,
+        lp.SyntLink.FLAT,
+    ]
+)
+# https://universaldependencies.org/v2/mwe.html
+class MWEBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
         max_syntax_dist=10,
@@ -493,6 +506,54 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
         good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
         whitelisted_preps: Optional[frozenset] = None,
         good_head_PoS: Optional[FrozenSet[lp.PosTag]] = None,
+        bad_head_rels: Optional[FrozenSet[lp.SyntLink]] = None,
+    ):
+        super().__init__()
+
+        self.max_syntax_dist = max_syntax_dist
+        if good_mod_PoS is None:
+            self.good_mod_PoS = frozenset(
+                [
+                    lp.PosTag.NOUN,
+                    lp.PosTag.ADJ,
+                    lp.PosTag.PARTICIPLE,
+                    lp.PosTag.PROPN,
+                ]
+            )
+        else:
+            self.good_mod_PoS = good_mod_PoS
+        if good_synt_rels is None:
+            self.good_synt_rels = MWE_RELS
+        else:
+            self.good_synt_rels = good_synt_rels
+
+        if whitelisted_preps is None:
+            self.whitelisted_preps = lp.PREP_WHITELIST
+        else:
+            self.whitelisted_preps = whitelisted_preps
+
+        if good_head_PoS is None:
+            self.good_head_PoS = frozenset(
+                [lp.PosTag.NOUN, lp.PosTag.ADJ, lp.PosTag.PARTICIPLE, lp.PosTag.PROPN]
+            )
+        else:
+            self.good_head_PoS = good_head_PoS
+
+        if bad_head_rels is None:
+            self.bad_head_rels = []
+        else:
+            self.bad_head_rels = bad_head_rels
+
+
+class PhraseBuilderOpts(BasicPhraseBuilderOpts):
+    def __init__(
+        self,
+        max_syntax_dist=30,
+        good_mod_PoS: Optional[FrozenSet[lp.PosTag]] = None,
+        good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
+        whitelisted_preps: Optional[frozenset] = None,
+        good_head_PoS: Optional[FrozenSet[lp.PosTag]] = None,
+        bad_head_rels: Optional[FrozenSet[lp.SyntLink]] = None,
     ):
         super().__init__()
 
@@ -517,9 +578,6 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                 [
                     lp.SyntLink.AMOD,
                     lp.SyntLink.NMOD,
-                    lp.SyntLink.COMPOUND,
-                    lp.SyntLink.FIXED,
-                    lp.SyntLink.FLAT,
                     lp.SyntLink.NUMMOD,
                 ]
             )
@@ -535,9 +593,14 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
         else:
             self.good_head_PoS = good_head_PoS
 
+        if bad_head_rels is None:
+            self.bad_head_rels = MWE_RELS
+        else:
+            self.bad_head_rels = bad_head_rels
+
 
 class PhraseBuilder(BasicPhraseBuilder):
-    def __init__(self, MaxN, opts: PhraseBuilderOpts = PhraseBuilderOpts()) -> None:
+    def __init__(self, MaxN, opts: BasicPhraseBuilderOpts = PhraseBuilderOpts()) -> None:
         super().__init__(MaxN, opts=opts)
         self._opts = opts
 
@@ -658,4 +721,7 @@ class PhraseBuilder(BasicPhraseBuilder):
         return True
 
     def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
-        return word_obj.pos_tag in self.opts().good_head_PoS
+        return (
+            word_obj.pos_tag in self.opts().good_head_PoS
+            and word_obj.synt_link not in self.opts().bad_head_rels
+        )

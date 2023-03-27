@@ -46,11 +46,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1678787340,
-        "narHash": "sha256-CVMOwQdu3TrqSUqIz6GB/S88MFRU65GvvNFNgBF7EPE=",
+        "lastModified": 1679605500,
+        "narHash": "sha256-s0qAo702Q/53PF/Mn1zevqtCV25YBDmkdUZqiASFVhg=",
         "ref": "refs/heads/master",
-        "rev": "a3080d5a4cd985d9cc863f7b4a8a4fc78eb4120d",
-        "revCount": 166,
+        "rev": "78d165439f3986ca40e275b338bfa8f4b807bbb0",
+        "revCount": 168,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },

@@ -15,9 +15,9 @@ from pylp.utils import adjust_syntax_links
 class Sent:
     def __init__(
         self,
-        words: List[WordObj] = None,
-        phrases: List[Phrase] = None,
-        bounds: Tuple[int, int] = None,
+        words: List[WordObj] | None = None,
+        phrases: List[Phrase] | None = None,
+        bounds: Tuple[int, int] | None = None,
     ) -> None:
         self._words: List[WordObj] = []
         if words is not None:
@@ -48,6 +48,11 @@ class Sent:
 
     def phrases(self) -> Iterator[Phrase]:
         yield from self._phrases
+
+    def mwes(self) -> Iterator[Phrase]:
+        for word_obj in self._words:
+            if word_obj.mwe is not None:
+                yield word_obj.mwe
 
     def set_phrases(self, phrases):
         self._phrases = phrases
@@ -152,7 +157,15 @@ class Sent:
                 phrases_s.append(str(p))
                 phrases_s.append('\n')
 
-        return ''.join([s] + words_s + phrases_s)
+        mwes = list(self.mwes())
+        mwes_l = []
+        if mwes:
+            mwes_l.append('MWEs:\n')
+            for p in mwes:
+                mwes_l.append(str(p))
+                mwes_l.append('\n')
+
+        return ''.join([s] + words_s + mwes_l + phrases_s)
 
 
 FragmentType = List[Tuple[int, int]]
@@ -162,7 +175,7 @@ class Doc:
     def __init__(
         self,
         doc_id: str,
-        text: str = None,
+        text: str | None = None,
         sents: Optional[List[Sent]] = None,
         lang: Optional[str | common.Lang] = None,
     ) -> None:

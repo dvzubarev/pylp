@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 
 import libpyexbase
 
@@ -12,7 +12,6 @@ from pylp.common import Attr
 
 class WordObj:
     __slots__ = (
-        # '_pos',
         'lemma',
         'form',
         '_word_id',
@@ -34,6 +33,7 @@ class WordObj:
         'num_type',
         'animacy',
         'extra',
+        'mwe',
     )
 
     def __init__(
@@ -87,6 +87,8 @@ class WordObj:
         self.animacy: Optional[common.WordAnimacy] = None
 
         self.extra: dict = {}
+
+        self.mwe: Any = None
 
     @property
     def word_id(self) -> Optional[int]:

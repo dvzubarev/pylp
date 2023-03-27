@@ -1,14 +1,42 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import Any, Iterator, List
+from typing import Any, List
+from collections.abc import Iterable
 import collections
+
 import logging
 
-from pylp.phrases.builder import BasicPhraseBuilder, PhraseBuilder, PhraseBuilderOpts
+from pylp.phrases.builder import (
+    BasicPhraseBuilder,
+    PhraseBuilder,
+    PhraseBuilderOpts,
+    MWEBuilderOpts,
+)
 from pylp.phrases.phrase import Phrase
 
 from pylp import lp_doc
+from pylp.word_obj import WordObj
+
+
+def _add_mwe_to_words(
+    sent_words: List[WordObj],
+    phrases: Iterable[Phrase],
+):
+
+    sorted_phrases = sorted(phrases, key=lambda p: -p.size())
+    if not sorted_phrases:
+        return
+
+    word_fillers: List[WordObj | None] = list(sent_words)
+    for p in sorted_phrases:
+        if any(word_fillers[pos] is None for pos in p.get_sent_pos_list()):
+            # overlapping with other phrase
+            continue
+        head_word = sent_words[p.sent_hp()]
+        head_word.mwe = p
+        for pos in p.get_sent_pos_list():
+            word_fillers[pos] = None
 
 
 def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
@@ -34,29 +62,28 @@ def add_phrases_to_doc(
     builder_cls=PhraseBuilder,
     builder_opts=None,
 ):
+
+    mwe_opts = MWEBuilderOpts()
+    mwe_builder: BasicPhraseBuilder = builder_cls(10, mwe_opts)
+    for sent in doc_obj:
+        phrases = mwe_builder.build_phrases_for_sent(sent)
+        _add_mwe_to_words(list(sent.words()), phrases)
+
     if builder_opts is None:
         builder_opts = PhraseBuilderOpts()
 
     builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
-    builder.build_phrases_for_doc(doc_obj)
+
+    for sent in doc_obj:
+        phrases = builder.build_phrases_for_sent(sent)
+        sent.set_phrases(phrases)
     if min_cnt:
         remove_rare_phrases(doc_obj, min_cnt=min_cnt)
 
 
-def make_phrases(
-    sent: lp_doc.Sent,
-    MaxN,
-    builder_cls=PhraseBuilder,
-    builder_opts=PhraseBuilderOpts(),
-) -> List[Phrase]:
-    builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
-    phrases = builder.build_phrases_for_sent(sent)
-    return phrases
-
-
 def replace_words_with_phrases(
     sent_words: List[Any],
-    phrases: Iterator[Phrase],
+    phrases: Iterable[Phrase],
     allow_overlapping_phrases=True,
     sort_key=lambda p: -p.size(),
     keep_filler=False,
@@ -64,18 +91,17 @@ def replace_words_with_phrases(
 ) -> List[Any | Phrase]:
     """phrases are list of prhases from the build_phrases_iter function"""
 
-    if not phrases:
-        return sent_words
-
     def testp(w):
         return isinstance(w, Phrase) or w == filler
 
-    phrases.sort(key=sort_key)
+    sorted_phrases = sorted(phrases, key=sort_key)
+    if not sorted_phrases:
+        return sent_words
 
     new_sent: List[Any] = list(range(len(sent_words)))
     logging.debug("new sent: %s", new_sent)
     pred = all if allow_overlapping_phrases else any
-    for p in phrases:
+    for p in sorted_phrases:
         if pred(testp(new_sent[pos]) for pos in p.get_sent_pos_list()):
             # overlapping with other phrase
             continue
