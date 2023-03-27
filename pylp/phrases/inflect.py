@@ -86,6 +86,12 @@ def inflect_en_phrase(phrase: Phrase, sent: lp_doc.Sent):
 # Implementation
 
 
+def _capitalize(word):
+    if word.isupper():
+        return word
+    return word.capitalize()
+
+
 class BaseInflector(Inflector):
     def __init__(self) -> None:
         super().__init__()
@@ -167,7 +173,7 @@ class RuInflector(BaseInflector):
                     phrase_words[head_pos] = form
 
         if head_obj.pos_tag == PosTag.PROPN:
-            phrase_words[head_pos] = phrase_words[head_pos].capitalize()
+            phrase_words[head_pos] = _capitalize(phrase_words[head_pos])
 
     def _inflect_to_case(self, word, word_obj: WordObj):
         number = 'plur' if word_obj.number == WordNumber.PLUR else 'sing'
@@ -223,7 +229,7 @@ class RuInflector(BaseInflector):
             if form is None:
                 form = phrase_words[mod_pos]
 
-            form = form.capitalize()
+            form = _capitalize(form)
 
         if form is not None:
             phrase_words[mod_pos] = form
@@ -437,7 +443,7 @@ class EnInflector(BaseInflector):
                 phrase_words[head_pos] = form
 
         if head_obj.pos_tag == PosTag.PROPN:
-            phrase_words[head_pos] = phrase_words[head_pos].capitalize()
+            phrase_words[head_pos] = _capitalize(phrase_words[head_pos])
 
     def inflect_pair(self, phrase: Phrase, sent: lp_doc.Sent, head_pos, mod_pos):
         head_sent_pos = phrase.get_sent_pos_list()[head_pos]
@@ -456,7 +462,7 @@ class EnInflector(BaseInflector):
                 if mod_obj.pos_tag == PosTag.PROPN:
                     if form is None:
                         form = current_lemma
-                    form = form.capitalize()
+                    form = _capitalize(form)
 
             elif (
                 mod_obj.pos_tag == PosTag.PARTICIPLE and mod_obj.tense in (None, WordTense.PRES)
