@@ -150,3 +150,45 @@ def test_mwe_with_conj_1():
         'Blue Square',
         'Red Square',
     ]
+
+
+def test_mwe_propagate_prep_modifier_1():
+    words = [
+        _mkw('Red', 1, lp.PosTag.PROPN, lp.SyntLink.COMPOUND),
+        _mkw('Square', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('of', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('temp', -2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('kek', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+    ]
+    doc_obj = lp_doc.Doc('id', sents=[lp_doc.Sent(words)])
+
+    add_phrases_to_doc(doc_obj, 6, min_cnt=0)
+
+    sent0 = doc_obj[0]
+    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases.sort()
+    assert len(str_phrases) == 3
+    assert str_phrases == [
+        'Red Square',
+        'Red Square of kek',
+        'Red Square of temp',
+    ]
+
+
+def test_mwe_propagate_prep_modifier_2():
+    words = [
+        _mkw('Root', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+        _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('spam', 1, lp.PosTag.NOUN, lp.SyntLink.COMPOUND),
+        _mkw('filter', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('other', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+    ]
+    doc_obj = lp_doc.Doc('id', sents=[lp_doc.Sent(words)])
+
+    add_phrases_to_doc(doc_obj, 6, min_cnt=0)
+
+    sent0 = doc_obj[0]
+    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases.sort()
+    assert len(str_phrases) == 3
+    assert str_phrases == ['Root of other', 'Root of spam filter', 'spam filter']

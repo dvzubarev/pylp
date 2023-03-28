@@ -261,7 +261,7 @@ class BasicPhraseBuilder:
         aux_info_list: List[AuxBuilderInfo | None],
     ):
         init_pos = pos
-        # find the actual head of your conj
+        # find the actual head of this conj
         link = word_obj.synt_link
         while word_obj.parent_offs and link == lp.SyntLink.CONJ:
             # at first find the modificator with no CONJ type
@@ -273,6 +273,9 @@ class BasicPhraseBuilder:
             link = conj_obj.synt_link
 
         if init_pos != pos:
+            # we skipped all chained conjuncts
+            # this word (with index pos) has real dep relation
+            # cache this info for init_pos
             aux_info = aux_info_list[init_pos]
             if aux_info is None:
                 aux_info = AuxBuilderInfo()
@@ -280,6 +283,8 @@ class BasicPhraseBuilder:
 
             aux_info.main_mod_pos = pos
 
+            # collect all conjuct positions in main mod info
+            # conj_set is a sorted list
             main_mod_aux_info = aux_info_list[pos]
             if main_mod_aux_info is None:
                 main_mod_aux_info = AuxBuilderInfo()
@@ -298,16 +303,30 @@ class BasicPhraseBuilder:
         return None, None
 
     def _propagate_head_modifiers_to_conj(self, aux_indices: AuxBuilderIndices):
+        def _find_phrase(levels):
+            # This word may be MWE, so need to scan all levels
+            for phrases_on_level in levels:
+                if phrases_on_level:
+                    # take the first phrase on a level
+                    return phrases_on_level[0]
+            return None
+
         for pos, aux_info in enumerate(aux_indices.aux_info_list):
+            # iterate over all words.
+            # If a word has main_mod_pos, then it is in conjunct relation.
+            # It may be need to propagate some modifiers to this word
             if aux_info is None or aux_info.main_mod_pos is None:
                 continue
 
-            if (conj_phrases := aux_indices.words_index[pos]) is None:
+            if (conj_phrases := aux_indices.words_index[pos]) is None or (
+                conj_mod_phrase := _find_phrase(conj_phrases)
+            ) is None:
                 continue
-            conj_mod_phrase = conj_phrases[0][0]
-            if (main_phrases := aux_indices.words_index[aux_info.main_mod_pos]) is None:
+
+            if (main_phrases := aux_indices.words_index[aux_info.main_mod_pos]) is None or (
+                main_mod_phrase := _find_phrase(main_phrases)
+            ) is None:
                 continue
-            main_mod_phrase = main_phrases[0][0]
 
             if (
                 conj_head_mod := conj_mod_phrase.get_head_modifier()
