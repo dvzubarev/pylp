@@ -563,7 +563,6 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                 [
                     lp.PosTag.NOUN,
                     lp.PosTag.ADJ,
-                    lp.PosTag.NUM,
                     lp.PosTag.PROPN,
                     lp.PosTag.PARTICIPLE,
                     lp.PosTag.PARTICIPLE_SHORT,
@@ -578,7 +577,6 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
                 [
                     lp.SyntLink.AMOD,
                     lp.SyntLink.NMOD,
-                    lp.SyntLink.NUMMOD,
                 ]
             )
         else:

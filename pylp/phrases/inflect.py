@@ -216,14 +216,6 @@ class RuInflector(BaseInflector):
             form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
             if case is not None:
                 self._cases[mod_pos] = case
-        elif link == SyntLink.NUMMOD:
-            # have to inflect head word
-            if head_obj.number == WordNumber.PLUR:
-                head_form, case = self._inflect_to_case(phrase_words[head_pos], head_obj)
-                if head_form is not None:
-                    phrase_words[head_pos] = head_form
-                if case is not None:
-                    self._cases[head_pos] = case
 
         if mod_obj.pos_tag == PosTag.PROPN:
             if form is None:
@@ -243,7 +235,7 @@ class RuInflector(BaseInflector):
         phrase_words = phrase.get_words()
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
 
-            if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN, PosTag.NUM):
+            if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
                 self._inflect_noun_noun(
                     phrase,
                     head_pos=head_pos,
