@@ -385,8 +385,8 @@ def test_phrases_propagate_conj_1():
     phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert len(phrases) == 2
-    assert str_phrases == ['conj_root nmod', 'root nmod']
+    assert len(phrases) == 1
+    assert str_phrases == ['conj_root nmod']
 
 
 def test_phrases_propagate_conj_2():
@@ -420,8 +420,8 @@ def test_phrases_propagate_conj_3():
     phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert len(phrases) == 3
-    assert str_phrases == ['conj_root_2 nmod', 'conj_root_3 nmod', 'root nmod']
+    assert len(phrases) == 1
+    assert str_phrases == ['conj_root_3 nmod']
 
 
 def test_phrases_propagate_conj_4():
@@ -461,16 +461,13 @@ def test_phrases_propagate_conj_5():
     phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert len(phrases) == 8
+    assert len(phrases) == 5
     assert str_phrases == [
         'amod1 root',
-        'amod1 root nmod',
         'amod2 root',
-        'amod2 root nmod',
         'amod3 conj_root_2',
         'amod3 conj_root_2 nmod',
         'conj_root_2 nmod',
-        'root nmod',
     ]
 
 

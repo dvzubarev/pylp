@@ -339,32 +339,17 @@ class BasicPhraseBuilder:
             if head_pos is None or mod_word_obj is None:
                 continue
 
-            # collect all head words with conjunct relation
-            conj_heads = [head_pos]
-            head_obj = sent[head_pos]
-            while head_obj.parent_offs and head_obj.synt_link == lp.SyntLink.CONJ:
-                conj_pos = head_pos + head_obj.parent_offs
+            is_good_mod = self._test_pair(head_pos, mod_word_obj, i, sent, all_mods_index)
 
-                if (conj_pos - i) * (head_pos - i) > 0:
-                    # two conj heads on the same side of this modifier
-                    head_pos = conj_pos
-                    conj_heads.append(head_pos)
-                    head_obj = sent[head_pos]
+            if words_index[i] is None and is_good_mod:
+                self._init_word_index(i, word_obj, words_index)
+
+            if is_good_mod:
+                mods_list = good_mods_index[head_pos]
+                if mods_list is None:
+                    good_mods_index[head_pos] = [i]
                 else:
-                    break
-
-            for head_pos in conj_heads:
-                is_good_mod = self._test_pair(head_pos, mod_word_obj, i, sent, all_mods_index)
-
-                if words_index[i] is None and is_good_mod:
-                    self._init_word_index(i, word_obj, words_index)
-
-                if is_good_mod:
-                    mods_list = good_mods_index[head_pos]
-                    if mods_list is None:
-                        good_mods_index[head_pos] = [i]
-                    else:
-                        mods_list.append(i)
+                    mods_list.append(i)
 
         aux_indices = AuxBuilderIndices(words_index, good_mods_index, aux_info_list)
         self._propagate_head_modifiers_to_conj(aux_indices)
