@@ -500,6 +500,25 @@ def test_phrases_propagate_conj_6():
     ]
 
 
+def test_phrases_banned_mod_1():
+    words = [
+        _mkw('в', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('число', 2, lp.PosTag.NOUN, lp.SyntLink.NMOD),
+        _mkw('m1', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(str_phrases) == 1
+    assert str_phrases == [
+        'm1 r',
+    ]
+
+
 def test_phrase_id():
     words = [
         _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),

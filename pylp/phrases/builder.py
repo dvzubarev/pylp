@@ -507,11 +507,12 @@ class MWEBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
         max_syntax_dist=10,
-        good_mod_PoS: Optional[FrozenSet[lp.PosTag]] = None,
-        good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
-        whitelisted_preps: Optional[frozenset] = None,
-        good_head_PoS: Optional[FrozenSet[lp.PosTag]] = None,
-        bad_head_rels: Optional[FrozenSet[lp.SyntLink]] = None,
+        good_mod_PoS: FrozenSet[lp.PosTag] | None = None,
+        good_synt_rels: FrozenSet[lp.SyntLink] | None = None,
+        whitelisted_preps: frozenset | None = None,
+        good_head_PoS: FrozenSet[lp.PosTag] | None = None,
+        bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
+        banned_modifiers: FrozenSet[tuple[str | None, str]] | None = None,
     ):
         super().__init__()
 
@@ -549,16 +550,22 @@ class MWEBuilderOpts(BasicPhraseBuilderOpts):
         else:
             self.bad_head_rels = bad_head_rels
 
+        if banned_modifiers is None:
+            self.banned_modifiers = frozenset()
+        else:
+            self.banned_modifiers = banned_modifiers
+
 
 class PhraseBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
         max_syntax_dist=30,
-        good_mod_PoS: Optional[FrozenSet[lp.PosTag]] = None,
-        good_synt_rels: Optional[FrozenSet[lp.SyntLink]] = None,
-        whitelisted_preps: Optional[frozenset] = None,
-        good_head_PoS: Optional[FrozenSet[lp.PosTag]] = None,
-        bad_head_rels: Optional[FrozenSet[lp.SyntLink]] = None,
+        good_mod_PoS: FrozenSet[lp.PosTag] | None = None,
+        good_synt_rels: FrozenSet[lp.SyntLink] | None = None,
+        whitelisted_preps: frozenset | None = None,
+        good_head_PoS: FrozenSet[lp.PosTag] | None = None,
+        bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
+        banned_modifiers: FrozenSet[tuple[str, lp.PosTag, str | None]] | None = None,
     ):
         super().__init__()
 
@@ -600,6 +607,15 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
             self.bad_head_rels = MWE_RELS
         else:
             self.bad_head_rels = bad_head_rels
+
+        if banned_modifiers is None:
+            self.banned_modifiers = frozenset(
+                [
+                    ('число', lp.PosTag.NOUN, 'в'),  # в том числе
+                ]
+            )
+        else:
+            self.banned_modifiers = banned_modifiers
 
 
 class PhraseBuilder(BasicPhraseBuilder):
@@ -711,6 +727,16 @@ class PhraseBuilder(BasicPhraseBuilder):
             or math.fabs(word_obj.parent_offs) > self.opts().max_syntax_dist
             or word_obj.pos_tag not in self.opts().good_mod_PoS
         ):
+            return False
+
+        key = (
+            word_obj.lemma,
+            word_obj.pos_tag,
+            None
+            if (prep_mod := word_obj.extra.get(lp.Attr.PREP_WHITE_LIST)) is None
+            else prep_mod[1],
+        )
+        if key in self.opts().banned_modifiers:
             return False
 
         link = word_obj.synt_link
