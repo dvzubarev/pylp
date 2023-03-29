@@ -372,6 +372,26 @@ def test_inflect_ru_phrase4():
     assert p.get_words() == ['живые', 'глаза']
 
 
+def test_inflect_ru_phrase5():
+    p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['область', 'финансы'], deps=[0, -1])
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.MASC,
+                number=WordNumber.PLUR,
+                case=WordCase.GEN,
+                synt_link=SyntLink.NMOD,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['область', 'финансов']
+
+
 def test_ru_propn_inflect1():
     p = Phrase(head_pos=0, sent_pos_list=[0, 1], words=['бригадир', 'владычин'], deps=[0, -1])
 

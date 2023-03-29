@@ -168,7 +168,7 @@ class RuInflector(BaseInflector):
 
         if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
             if head_obj.number == WordNumber.PLUR:
-                form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'plur'})
+                form = self._pymorphy_inflect(phrase_words[head_pos], "NOUN", {'number': 'plur'})
                 if form is not None:
                     phrase_words[head_pos] = form
 
@@ -181,12 +181,13 @@ class RuInflector(BaseInflector):
             return None, None
 
         case = self._case_mapping[word_obj.case]
-        feats = {number, case}
+        feats = {'number': number, 'case': case}
         if (
             word_obj.gender is not None
             and (gender := self._gender2pymorphy(word_obj.gender)) is not None
         ):
-            feats.add(gender)
+            feats['gender'] = gender
+
         form = self._pymorphy_inflect(word, "NOUN", feats)
         return form, word_obj.case
 
@@ -245,16 +246,14 @@ class RuInflector(BaseInflector):
                     sent=sent,
                 )
             elif mod_obj.pos_tag in (PosTag.ADJ, PosTag.PARTICIPLE):
-                feats = set()
                 number = 'plur' if head_obj.number == WordNumber.PLUR else 'sing'
-                feats.add(number)
+                feats = {'number': number}
                 if number != 'plur':
                     gender = self._gender2pymorphy(head_obj.gender)
                     if gender is not None:
-                        feats.add(gender)
+                        feats['gender'] = gender
 
-                case = self._case_mapping[self._cases[head_pos]]
-                feats.add(case)
+                feats['case'] = self._case_mapping[self._cases[head_pos]]
 
                 if mod_obj.pos_tag == PosTag.ADJ:
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'ADJF', feats)
@@ -303,8 +302,7 @@ class RuInflector(BaseInflector):
                 return l
         return None
 
-    def _pymorphy_inflect(self, word: str, tag: str, feats, mod_obj: Optional[WordObj] = None):
-        # ru_inflector = _get_ru_inflector()
+    def _pymorphy_inflect(self, word: str, tag: str, feats_dict, mod_obj: Optional[WordObj] = None):
         results = self._pymorphy.parse(word)
 
         parsed = None
@@ -321,7 +319,10 @@ class RuInflector(BaseInflector):
                         break
 
         if parsed is not None:
-            inflected = parsed.inflect(feats)
+            if parsed.tag.gender is None and 'gender' in feats_dict:
+                del feats_dict['gender']
+
+            inflected = parsed.inflect(frozenset(feats_dict.values()))
 
             if inflected is not None:
                 return inflected.word
