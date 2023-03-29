@@ -46,8 +46,15 @@ class Sent:
 
         self._words = new_words
 
-    def phrases(self) -> Iterator[Phrase]:
+    def phrases(self, with_mwe=False) -> Iterator[Phrase]:
         yield from self._phrases
+
+        if with_mwe:
+            # some MWEs already added to phrases
+            seen_phrases = frozenset(p.get_id() for p in self._phrases)
+            for mwe in self.mwes():
+                if mwe.get_id() not in seen_phrases:
+                    yield mwe
 
     def mwes(self) -> Iterator[Phrase]:
         for word_obj in self._words:
