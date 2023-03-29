@@ -751,6 +751,7 @@ class PhraseBuilder(BasicPhraseBuilder):
 
     def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         return (
-            word_obj.pos_tag in self.opts().good_head_PoS
+            not word_obj.lang == lp.Lang.UNDEF
+            and word_obj.pos_tag in self.opts().good_head_PoS
             and word_obj.synt_link not in self.opts().bad_head_rels
         )
