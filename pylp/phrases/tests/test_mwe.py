@@ -35,17 +35,17 @@ def test_add_mwes_to_doc_1():
     add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
     words0 = list(doc_obj.sents())[0]
-    assert words0[0].mwe is None
-    assert words0[1].mwe is not None
-    assert words0[2].mwe is None
-    assert words0[3].mwe is None
-    assert words0[4].mwe is None
-    assert words0[5].mwe is None
-    assert words0[6].mwe is None
-    assert words0[7].mwe is not None
-    mwe_phrase1 = words0[1].mwe
+    assert not words0[0].mwes
+    assert words0[1].mwes
+    assert not words0[2].mwes
+    assert not words0[3].mwes
+    assert not words0[4].mwes
+    assert not words0[5].mwes
+    assert not words0[6].mwes
+    assert words0[7].mwes
+    mwe_phrase1 = words0[1].mwes[0]
     assert mwe_phrase1.get_str_repr() == 'Ivanov I. V.'
-    mwe_phrase2 = words0[7].mwe
+    mwe_phrase2 = words0[7].mwes[0]
     assert mwe_phrase2.get_str_repr() == 'spam filter'
 
     sent0 = doc_obj[0]

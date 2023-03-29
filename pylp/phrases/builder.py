@@ -241,11 +241,12 @@ class BasicPhraseBuilder:
         try:
             cur_word_index = [[] for _ in range(self._max_n)]
             words_index[pos] = cur_word_index
-            if word_obj.mwe is not None:
-                mwe_phrase: Phrase = word_obj.mwe
-                if mwe_phrase.size() > self._max_n:
-                    return
-                cur_word_index[mwe_phrase.size() - 1] = [mwe_phrase]
+            if word_obj.mwes:
+                mwe_phrase: Phrase
+                for mwe_phrase in word_obj.mwes:
+                    if mwe_phrase.size() > self._max_n:
+                        return
+                    cur_word_index[mwe_phrase.size() - 1].append(mwe_phrase)
             else:
                 phrase = Phrase.from_word(pos, word_obj)
                 # init words_index's level 0

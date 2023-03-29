@@ -28,15 +28,17 @@ def _add_mwe_to_words(
     if not sorted_phrases:
         return
 
-    word_fillers: List[WordObj | None] = list(sent_words)
+    added_phrases: list[list[Phrase]] = [[] for _ in range(len(sent_words))]
     for p in sorted_phrases:
-        if any(word_fillers[pos] is None for pos in p.get_sent_pos_list()):
-            # overlapping with other phrase
-            continue
-        head_word = sent_words[p.sent_hp()]
-        head_word.mwe = p
         for pos in p.get_sent_pos_list():
-            word_fillers[pos] = None
+            if (head_phrases := added_phrases[pos]) and any(hp.contains(p) for hp in head_phrases):
+                # phrase is completely overlapped by already added phrase
+                break
+        else:
+            head_word = sent_words[p.sent_hp()]
+            head_word.mwes.append(p)
+            for pos in p.get_sent_pos_list():
+                added_phrases[pos].append(p)
 
 
 def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
@@ -61,9 +63,11 @@ def add_phrases_to_doc(
     min_cnt=0,
     builder_cls=PhraseBuilder,
     builder_opts=None,
+    mwe_opts=None,
 ):
 
-    mwe_opts = MWEBuilderOpts()
+    if mwe_opts is None:
+        mwe_opts = MWEBuilderOpts()
     mwe_builder: BasicPhraseBuilder = builder_cls(10, mwe_opts)
     for sent in doc_obj:
         phrases = mwe_builder.build_phrases_for_sent(sent)

@@ -51,8 +51,7 @@ class Sent:
 
     def mwes(self) -> Iterator[Phrase]:
         for word_obj in self._words:
-            if word_obj.mwe is not None:
-                yield word_obj.mwe
+            yield from word_obj.mwes
 
     def set_phrases(self, phrases):
         self._phrases = phrases
