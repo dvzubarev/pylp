@@ -31,6 +31,25 @@ def test_filter_words():
     assert adjusted_phrases[0].get_sent_pos_list() == [0, 1]
 
 
+def test_filter_words_with_mwe():
+    words = [
+        WordObj(lemma='r', pos_tag=PosTag.NOUN),
+        WordObj(lemma='temp', pos_tag=PosTag.ADP),
+        WordObj(lemma='I.', pos_tag=PosTag.NOUN),
+        WordObj(lemma='K.', pos_tag=PosTag.NOUN),
+    ]
+    words[2].mwes = [Phrase(sent_pos_list=[2, 3], words=['I.', 'V.'])]
+
+    sent = lp_doc.Sent(words)
+    sent.filter_words([filter1])
+
+    assert len(sent) == 3
+    words = list(sent.words())
+    assert words[1].mwes
+    mwes_pos = words[1].mwes[0].get_sent_pos_list()
+    assert mwes_pos == [1, 2]
+
+
 def test_from_dict():
     doc_dict = {
         'id': 'temp',

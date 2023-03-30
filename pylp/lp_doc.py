@@ -83,8 +83,17 @@ class Sent:
 
         if len(new_words) < len(new_positions):
             adjust_syntax_links(new_words, new_positions)
+            self._adjust_mwes(new_positions)
             self._adjust_phrases(new_positions)
         self._words = new_words
+
+    def _adjust_mwes(self, new_positions):
+        for word_obj in self._words:
+            new_mwes = []
+            for mwe_phrase in word_obj.mwes:
+                if self._fix_sent_pos_in_phrase(mwe_phrase, new_positions):
+                    new_mwes.append(mwe_phrase)
+            word_obj.mwes = new_mwes
 
     def _adjust_phrases(self, new_positions):
         if not self._phrases:
@@ -92,12 +101,17 @@ class Sent:
 
         new_phrases = []
         for phrase in self._phrases:
-            if any(1 for p in phrase.get_sent_pos_list() if new_positions[p] == -1):
-                continue
-            pos_list = [new_positions[p] for p in phrase.get_sent_pos_list()]
-            phrase.set_sent_pos_list(pos_list)
-            new_phrases.append(phrase)
+            if self._fix_sent_pos_in_phrase(phrase, new_positions):
+                new_phrases.append(phrase)
         self._phrases = new_phrases
+
+    def _fix_sent_pos_in_phrase(self, phrase, new_positions):
+        if any(1 for p in phrase.get_sent_pos_list() if new_positions[p] == -1):
+            return False
+
+        pos_list = [new_positions[p] for p in phrase.get_sent_pos_list()]
+        phrase.set_sent_pos_list(pos_list)
+        return True
 
     def __len__(self) -> int:
         return len(self._words)
