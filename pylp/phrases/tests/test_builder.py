@@ -274,6 +274,25 @@ def test_full_phrase_builder():
     assert str_phrases == ['h1 h2', 'm1 h1', 'm1 h1 h2']
 
 
+def test_merging_overlapping_phrases_1():
+    words = [
+        _mkw('m1', 2, lp.PosTag.PROPN, lp.SyntLink.NMOD),
+        _mkw('a', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('h1', 1, lp.PosTag.PROPN, lp.SyntLink.NMOD),
+        _mkw('r', 0, lp.PosTag.PROPN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert len(phrases) == 6
+    assert str_phrases == ['a h1 r', 'a r', 'h1 r', 'm1 a h1 r', 'm1 h1', 'm1 h1 r']
+    main_phrase = [p for p in phrases if p.size() == 4][0]
+    assert main_phrase.get_deps() == [2, 2, 1, 0]
+
+
 def test_phrases_with_prepositions():
     words = [
         _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),

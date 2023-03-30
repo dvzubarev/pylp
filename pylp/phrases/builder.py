@@ -4,7 +4,7 @@
 import math
 import logging
 import copy
-from typing import Iterator, List, Optional, FrozenSet
+from typing import Iterator, List, Optional, FrozenSet, Any
 
 import pylp.common as lp
 from pylp import lp_doc
@@ -26,35 +26,37 @@ def _sorted_lists_intersect(li1, li2):
     return False
 
 
-def _find_insert_pos(head_phrase: Phrase, other_phrase: Phrase):
+def _create_phrase_sent_pos_list(head_phrase: Phrase, other_phrase: Phrase):
     head_pos_list = head_phrase.get_sent_pos_list()
     other_pos_list = other_phrase.get_sent_pos_list()
-    if head_phrase.sent_hp() < other_phrase.sent_hp():
-        # The modificator is on the right side
-        insert_pos = len(head_pos_list)
-        while other_phrase.sent_hp() < head_pos_list[insert_pos - 1]:
-            insert_pos -= 1
-    else:
-        # The modificator is on the left side
-        insert_pos = 0
-        while other_phrase.sent_hp() > head_pos_list[insert_pos]:
-            insert_pos += 1
 
-    if insert_pos > 0 and head_pos_list[insert_pos - 1] > other_pos_list[0]:
-        logging.warning(
-            "modificator overlaps with head phrase on the left: head=%s; mod=%s",
-            head_phrase,
-            other_phrase,
-        )
-        return None
-    if insert_pos < len(head_pos_list) and head_pos_list[insert_pos] < other_pos_list[-1]:
-        logging.warning(
-            "modificator overlaps with head phrase on the right: head=%s; mod=%s",
-            head_phrase,
-            other_phrase,
-        )
-        return None
-    return insert_pos
+    new_pos_list = []
+    new_head_pos_list: list[int] = [-1] * len(head_pos_list)
+    new_other_pos: list[int] = [-1] * len(other_pos_list)
+    i = j = 0
+    while i < len(head_pos_list) and j < len(other_pos_list):
+        if head_pos_list[i] < other_pos_list[j]:
+            new_head_pos_list[i] = len(new_pos_list)
+            new_pos_list.append(head_pos_list[i])
+            i += 1
+        elif other_pos_list[j] < head_pos_list[i]:
+            new_other_pos[j] = len(new_pos_list)
+            new_pos_list.append(other_pos_list[j])
+            j += 1
+        else:
+            raise RuntimeError(
+                'trying to merge phrase with the same word: '
+                f'head={head_phrase}; other={other_phrase}'
+            )
+    while i < len(head_pos_list):
+        new_head_pos_list[i] = len(new_pos_list)
+        new_pos_list.append(head_pos_list[i])
+        i += 1
+    while j < len(other_pos_list):
+        new_other_pos[j] = len(new_pos_list)
+        new_pos_list.append(other_pos_list[j])
+        j += 1
+    return new_pos_list, new_head_pos_list, new_other_pos
 
 
 def _is_new_phrase_valid(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent):
@@ -98,77 +100,60 @@ def _create_repr_modifiers(other_phrase: Phrase, sent: lp_doc.Sent):
     return other_repr_modifiers
 
 
+def _adjust_deps(new_pos_list, old_deps, new_deps):
+    for new_pos, (old_pos, v) in zip(new_pos_list, enumerate(old_deps)):
+        if v == 0:
+            continue
+        old_head_pos = old_pos + v
+        new_head_pos = new_pos_list[old_head_pos]
+        new_deps[new_pos] = new_head_pos - new_pos
+
+
 def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent, phrases_cache):
     if not _is_new_phrase_valid(head_phrase, other_phrase, sent):
         return None
 
-    new_mod_sz = other_phrase.size()
-    old_head_pos = head_pos = head_phrase.get_head_pos()
-
-    head_pos_list = head_phrase.get_sent_pos_list()
-    other_on_left = head_phrase.sent_hp() > other_phrase.sent_hp()
-    if other_on_left:
-        head_pos += new_mod_sz
-
-    insert_pos = _find_insert_pos(head_phrase, other_phrase)
-    if insert_pos is None:
-        return None
-
-    phrase_signature = (
-        head_pos_list[:insert_pos] + other_phrase.get_sent_pos_list() + head_pos_list[insert_pos:]
+    new_pos_list, new_head_pos_list, new_other_pos_list = _create_phrase_sent_pos_list(
+        head_phrase, other_phrase
     )
+    new_head_pos = new_head_pos_list[head_phrase.get_head_pos()]
 
-    t = tuple(phrase_signature)
+    t = tuple(new_pos_list)
     if t in phrases_cache:
         return None
     phrases_cache.add(t)
 
-    head_deps = head_phrase.get_deps()
-    deps = head_deps[:insert_pos] + other_phrase.get_deps() + head_deps[insert_pos:]
-    logging.debug(
-        "head_pos: %s, insert pos: %s, head_deps: %s, deps: %s",
-        head_pos,
-        insert_pos,
-        head_deps,
-        deps,
-    )
+    deps = [0] * len(new_pos_list)
+    _adjust_deps(new_head_pos_list, head_phrase.get_deps(), deps)
+    _adjust_deps(new_other_pos_list, other_phrase.get_deps(), deps)
+    other_head_pos = new_other_pos_list[other_phrase.get_head_pos()]
+    deps[other_head_pos] = new_head_pos - other_head_pos
 
-    if insert_pos < head_pos:
-        i = 0
-        while i < insert_pos:
-            if i + head_deps[i] == old_head_pos:
-                # this is modificator of the root and it should be adjusted
-                deps[i] += new_mod_sz
-            i += 1
-    else:
-        i = -1
-        while i > insert_pos - len(head_deps) - 1:
-            if len(head_deps) + i + head_deps[i] == old_head_pos:
-                deps[i] -= new_mod_sz
-            i -= 1
+    words = [sent[p].lemma for p in new_pos_list]
 
-    deps[insert_pos + other_phrase.get_head_pos()] = (
-        head_pos - insert_pos - other_phrase.get_head_pos()
-    )
-
-    words = [sent[p].lemma for p in phrase_signature]
+    other_on_left = head_phrase.sent_hp() > other_phrase.sent_hp()
     id_holder = copy.copy(head_phrase.get_id_holder()).merge_mod(
         other_phrase.get_id_holder(), other_on_left
     )
 
+    def _merge_components(head_comp, other_comp):
+        new_comp: list[Any] = [None] * len(new_pos_list)
+        for new_pos, v in zip(new_head_pos_list, head_comp):
+            new_comp[new_pos] = v
+        for new_pos, v in zip(new_other_pos_list, other_comp):
+            new_comp[new_pos] = v
+        return new_comp
+
     head_repr_modifiers = head_phrase.get_repr_modifiers()
     other_repr_modifiers = _create_repr_modifiers(other_phrase, sent)
-
-    repr_modifiers = (
-        head_repr_modifiers[:insert_pos] + other_repr_modifiers + head_repr_modifiers[insert_pos:]
-    )
+    repr_modifiers = _merge_components(head_repr_modifiers, other_repr_modifiers)
 
     new_phrase = Phrase(
-        size=head_phrase.size() + new_mod_sz,
-        head_pos=head_pos,
+        size=head_phrase.size() + other_phrase.size(),
+        head_pos=new_head_pos,
         words=words,
         deps=deps,
-        sent_pos_list=phrase_signature,
+        sent_pos_list=new_pos_list,
         id_holder=id_holder,
         head_modifier=head_phrase.get_head_modifier(),
         repr_modifiers=repr_modifiers,
