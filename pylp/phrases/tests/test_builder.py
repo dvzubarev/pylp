@@ -519,6 +519,19 @@ def test_phrases_banned_mod_1():
     ]
 
 
+def test_phrases_nmod_adj_1():
+    words = [
+        _mkw('in', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('particular', 1, lp.PosTag.ADJ, lp.SyntLink.NMOD),
+        _mkw('r', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+    ]
+    sent = lp_doc.Sent(words)
+
+    phrase_builder = PhraseBuilder(MaxN=4)
+    phrases = phrase_builder.build_phrases_for_sent(sent)
+    assert not phrases
+
+
 def test_phrase_id():
     words = [
         _mkw('m1', 2, lp.PosTag.ADJ, lp.SyntLink.AMOD),

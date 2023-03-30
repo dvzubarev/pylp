@@ -63,7 +63,7 @@ def _is_new_phrase_valid(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc
         other_head_modifier.prep_modifier is not None
         and other_head_modifier.prep_modifier[0] > other_phrase.get_sent_pos_list()[0]
     ):
-        logging.warning(
+        logging.debug(
             "Preposition should be before all modificators: prep=%s, phrase=%s",
             other_head_modifier.prep_modifier,
             other_phrase,
@@ -502,6 +502,23 @@ MWE_RELS = frozenset(
         lp.SyntLink.FLAT,
     ]
 )
+COMMON_BANNED_MODIFIERS = [
+    ('число', lp.PosTag.NOUN, 'в'),  # в том числе
+    ('целое', lp.PosTag.NOUN, 'в'),  # в целом
+    ('случай', lp.PosTag.NOUN, 'в'),  # в случае
+    ('среднее', lp.PosTag.NOUN, 'в'),  # в среднем
+    ('основной', lp.PosTag.ADJ, 'в'),  # в основном
+    ('часть', lp.PosTag.NOUN, 'по'),  # по части
+    ('последствие', lp.PosTag.NOUN, 'в'),
+    ('итог', lp.PosTag.NOUN, 'в'),
+    ('мера', lp.PosTag.NOUN, 'по'),
+    ('очередь', lp.PosTag.NOUN, 'в'),
+    ('суть', lp.PosTag.NOUN, 'по'),
+    ('образ', lp.PosTag.NOUN, None),  # главным образом
+    ('степень', lp.PosTag.NOUN, 'в'),  # главным образом
+    ('example', lp.PosTag.NOUN, 'for'),
+]
+
 # https://universaldependencies.org/v2/mwe.html
 class MWEBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
@@ -574,6 +591,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
             self.good_mod_PoS = frozenset(
                 [
                     lp.PosTag.NOUN,
+                    lp.PosTag.PROPN,
                     lp.PosTag.ADJ,
                     lp.PosTag.PROPN,
                     lp.PosTag.PARTICIPLE,
@@ -609,11 +627,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
             self.bad_head_rels = bad_head_rels
 
         if banned_modifiers is None:
-            self.banned_modifiers = frozenset(
-                [
-                    ('число', lp.PosTag.NOUN, 'в'),  # в том числе
-                ]
-            )
+            self.banned_modifiers = frozenset(COMMON_BANNED_MODIFIERS)
         else:
             self.banned_modifiers = banned_modifiers
 
@@ -667,7 +681,7 @@ class PhraseBuilder(BasicPhraseBuilder):
         if whitelisted_preps:
             selected_prep = whitelisted_preps[-1]
             if len(whitelisted_preps) > 1:
-                logging.warning(
+                logging.debug(
                     "more than one whitelisted preps: %s choosing the closest to the word: %s",
                     whitelisted_preps,
                     sent[pos],
@@ -715,7 +729,9 @@ class PhraseBuilder(BasicPhraseBuilder):
     def _test_nmod(self, word_obj: WordObj):
         """Return true if this nmod without prepositions or with whitelisted preposition"""
         extra = word_obj.extra
-        return lp.Attr.PREP_WHITE_LIST in extra or lp.Attr.PREP_MOD not in extra
+        return word_obj.pos_tag in (lp.PosTag.NOUN, lp.PosTag.PROPN) and (
+            lp.Attr.PREP_WHITE_LIST in extra or lp.Attr.PREP_MOD not in extra
+        )
 
     def _test_modifier(
         self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType
