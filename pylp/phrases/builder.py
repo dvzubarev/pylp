@@ -596,7 +596,7 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
         bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
         banned_modifiers: FrozenSet[tuple[str, lp.PosTag, str | None]] | None = None,
     ):
-        super().__init__()
+        super().__init__(max_variants_bound=8)
 
         self.max_syntax_dist = max_syntax_dist
         if good_mod_PoS is None:
