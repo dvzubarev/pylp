@@ -535,7 +535,8 @@ COMMON_BANNED_MODIFIERS = [
 class MWEBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
         self,
-        max_syntax_dist=10,
+        mwe_size=0,
+        max_syntax_dist=15,
         good_mod_PoS: FrozenSet[lp.PosTag] | None = None,
         good_synt_rels: FrozenSet[lp.SyntLink] | None = None,
         whitelisted_preps: frozenset | None = None,
@@ -544,6 +545,8 @@ class MWEBuilderOpts(BasicPhraseBuilderOpts):
         banned_modifiers: FrozenSet[tuple[str | None, str]] | None = None,
     ):
         super().__init__(max_variants_bound=3, return_top_level_phrases=True)
+
+        self.mwe_size = mwe_size
 
         self.max_syntax_dist = max_syntax_dist
         if good_mod_PoS is None:

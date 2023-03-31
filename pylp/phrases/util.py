@@ -64,13 +64,14 @@ def add_phrases_to_doc(
     builder_cls=PhraseBuilder,
     builder_opts=None,
     mwe_opts=None,
-    mwe_size=0,
 ):
 
     if mwe_opts is None:
         mwe_opts = MWEBuilderOpts()
-    if not mwe_size:
+    if not mwe_opts.mwe_size:
         mwe_size = MaxN
+    else:
+        mwe_size = mwe_opts.mwe_size
     mwe_builder: BasicPhraseBuilder = builder_cls(mwe_size, mwe_opts)
     for sent in doc_obj:
         phrases = mwe_builder.build_phrases_for_sent(sent)
