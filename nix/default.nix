@@ -5,7 +5,8 @@
   pyexbase,
   pymorphy2,
   pylp-resources,
-  pytest
+  pytest,
+  pytest-timeout
 
 }:
 buildPythonPackage {
@@ -15,6 +16,6 @@ buildPythonPackage {
 
   propagatedBuildInputs=[ujson pyexbase pymorphy2
                          pylp-resources];
-  nativeCheckInputs=[pytest];
+  nativeCheckInputs=[pytest pytest-timeout];
   checkPhase="pytest";
 }

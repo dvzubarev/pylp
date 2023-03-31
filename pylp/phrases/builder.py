@@ -195,8 +195,13 @@ class AuxBuilderIndices:
 
 
 class BasicPhraseBuilderOpts:
-    def __init__(self):
-        pass
+    def __init__(
+        self,
+        max_variants_bound: int | None = None,
+        return_top_level_phrases=False,
+    ):
+        self.max_variants_bound = max_variants_bound
+        self.return_top_level_phrases = return_top_level_phrases
 
 
 class BasicPhraseBuilder:
@@ -390,37 +395,54 @@ class BasicPhraseBuilder:
             for mod_phrase in mod_phrases[level]:
                 yield mod_phrase
 
+    def _generate_phrases_for_level(self, level, head_pos, aux_indices, sent, phrases_cache):
+        mods_index = aux_indices.mods_index[head_pos]
+        if not mods_index:
+            # no modificators
+            return
+        head_index = aux_indices.words_index[head_pos]
+        # extend the phrases from previous levels with modificators
+        # e.g. we can take already built 2word phrase, add one modificator and get 3word phrase.
+        # or get 2word phrase, add modificator from level 1 that consists of 2 words.
+        for head_level, head_phrases in enumerate(head_index):
+            mod_level = level - head_level
+            if mod_level < 0:
+                break
+            for head_phrase in head_phrases:
+                gen = _generate_new_phrases(
+                    head_phrase,
+                    self._modifiers_generator(
+                        mods_index,
+                        aux_indices,
+                        mod_level,
+                        head_phrase.get_sent_pos_list(),
+                    ),
+                    sent,
+                    phrases_cache,
+                )
+
+                for p in gen:
+                    head_index[level + 1].append(p)
+                    if (
+                        self._opts.max_variants_bound is not None
+                        and len(head_index[level + 1]) >= self._opts.max_variants_bound
+                    ):
+                        return
+
     def _generate_phrases(self, sent: lp_doc.Sent, aux_indices: AuxBuilderIndices):
         phrases_cache = set()
+        # fill words_index's levels 1 .. MaxN
         for l in range(0, self._max_n - 1):
             for head_pos, head_index in enumerate(aux_indices.words_index):
                 if head_index is None:
                     continue
-                mods_index = aux_indices.mods_index[head_pos]
-                if not mods_index:
-                    # no modificators
-                    continue
-                # extend the phrases from previous levels with modificators
-                # e.g. we can take already built 2word phrase, add one modificator and get 3word phrase.
-                # or get 2word phrase, add modificator from level 1 that consists of 2 words.
-                for head_level, head_phrases in enumerate(head_index):
-                    mod_level = l - head_level
-                    if mod_level < 0:
-                        break
-                    for head_phrase in head_phrases:
-                        gen = _generate_new_phrases(
-                            head_phrase,
-                            self._modifiers_generator(
-                                mods_index,
-                                aux_indices,
-                                mod_level,
-                                head_phrase.get_sent_pos_list(),
-                            ),
-                            sent,
-                            phrases_cache,
-                        )
-                        for p in gen:
-                            head_index[l + 1].append(p)
+                self._generate_phrases_for_level(l, head_pos, aux_indices, sent, phrases_cache)
+
+    def _find_top_level(self, head_index):
+        for i in range(self._max_n - 1, 0, -1):
+            if head_index[i]:
+                return i
+        return None
 
     def _build_phrases_impl(self, sent: lp_doc.Sent):
         logging.debug("sent: %s", sent)
@@ -434,14 +456,19 @@ class BasicPhraseBuilder:
         logging.debug("good_mods_index: %s", aux_indices.mods_index)
         logging.debug("words index: %s", aux_indices.words_index)
 
-        # fill words_index's levels 1 .. MaxN
         self._generate_phrases(sent, aux_indices)
 
         all_phrases = []
         for head_phrases in aux_indices.words_index:
             if head_phrases is None:
                 continue
-            for l in range(1, self._max_n):
+
+            start_level = 1
+            if self._opts.return_top_level_phrases:
+                start_level = self._find_top_level(head_phrases)
+                if start_level is None:
+                    continue
+            for l in range(start_level, self._max_n):
                 for p in head_phrases[l]:
                     pos = p.sent_hp()
                     if self._test_head(sent[pos], pos, sent, all_mods_index):
@@ -516,7 +543,7 @@ class MWEBuilderOpts(BasicPhraseBuilderOpts):
         bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
         banned_modifiers: FrozenSet[tuple[str | None, str]] | None = None,
     ):
-        super().__init__()
+        super().__init__(max_variants_bound=3, return_top_level_phrases=True)
 
         self.max_syntax_dist = max_syntax_dist
         if good_mod_PoS is None:

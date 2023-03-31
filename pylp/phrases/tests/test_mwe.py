@@ -2,10 +2,11 @@
 
 from pylp import lp_doc
 
-from pylp.phrases.builder import Phrase
 from pylp.phrases.util import add_phrases_to_doc
 import pylp.common as lp
 from pylp.word_obj import WordObj
+
+import pytest
 
 
 def _mkw(lemma, link, PoS=lp.PosTag.UNDEF, link_kind=None):
@@ -128,6 +129,54 @@ def test_add_mwes_to_doc_5():
         'spam filter',
         'spam filter of web server',
         'web server',
+    ]
+
+
+@pytest.mark.timeout(0.8)
+def test_large_mwe_1():
+    words = [
+        _mkw('r', 0, lp.PosTag.PROPN, lp.SyntLink.ROOT),
+        _mkw('m1', -1, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m2', -1, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m3', -2, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m4', -3, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m5', -4, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m6', -5, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m7', -6, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m7.1', -7, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m8', -8, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m9', -9, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m10', -10, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m11', 3, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m12', 2, lp.PosTag.PROPN, lp.SyntLink.COMPOUND),
+        _mkw('m13', 1, lp.PosTag.PROPN, lp.SyntLink.COMPOUND),
+        _mkw('lr', -13, lp.PosTag.PROPN, lp.SyntLink.APPOS),
+        _mkw('m15', -1, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m16', -2, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m17', -3, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m18', -4, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m19', -5, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m20', -6, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m21', -7, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+        _mkw('m22', 2, lp.PosTag.PROPN, lp.SyntLink.COMPOUND),
+        _mkw('m23', 1, lp.PosTag.PROPN, lp.SyntLink.COMPOUND),
+        _mkw('m24', -10, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+    ]
+    doc_obj = lp_doc.Doc('id', sents=[lp_doc.Sent(words)])
+
+    add_phrases_to_doc(doc_obj, 10, min_cnt=0)
+
+    sent0 = doc_obj[0]
+    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases.sort()
+    assert len(str_phrases) == 6
+    assert str_phrases == [
+        'm11 m12 m13 lr m15 m16 m17 m22 m23 m24',
+        'm11 m12 m13 lr m15 m16 m18 m22 m23 m24',
+        'm11 m12 m13 lr m15 m16 m19 m22 m23 m24',
+        'r m1 m2 m3 m4 m5 m6 m7 m7.1 m10',
+        'r m1 m2 m3 m4 m5 m6 m7 m7.1 m8',
+        'r m1 m2 m3 m4 m5 m6 m7 m7.1 m9',
     ]
 
 
