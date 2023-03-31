@@ -140,6 +140,8 @@ class RuInflector(BaseInflector):
         super().__init__()
 
         self._pymorphy = pymorphy2.MorphAnalyzer()
+        self._parsed_cache = {}
+        self._max_cache_size = 20_000
 
         self._cases: List[WordCase] = []
         self._case_mapping = {
@@ -304,8 +306,15 @@ class RuInflector(BaseInflector):
                 return l
         return None
 
+    def _parse_word(self, word):
+        if word not in self._parsed_cache:
+            if len(self._parsed_cache) > self._max_cache_size:
+                self._parsed_cache.clear()
+            self._parsed_cache[word] = self._pymorphy.parse(word)
+        return self._parsed_cache[word]
+
     def _pymorphy_inflect(self, word: str, tag: str, feats_dict, mod_obj: Optional[WordObj] = None):
-        results = self._pymorphy.parse(word)
+        results = self._parse_word(word)
 
         parsed = None
 
