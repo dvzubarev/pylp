@@ -180,7 +180,9 @@ class RuInflector(BaseInflector):
         if word_obj.case is None:
             return None, None
 
-        case = self._case_mapping[word_obj.case]
+        case = self._case_mapping.get(word_obj.case)
+        if case is None:
+            return None, None
         feats = {'number': number, 'case': case}
         if (
             word_obj.gender is not None

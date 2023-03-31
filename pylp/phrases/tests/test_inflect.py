@@ -240,6 +240,20 @@ def test_inflect_phrase_with_wrong_doc_lang():
     assert p.get_words() == ['красивая', 'картина']
 
 
+def test_inflect_phrase_unsupported_case():
+    p = Phrase(head_pos=1, sent_pos_list=[0, 1], words=['темп', 'томп'], deps=[1, 0])
+
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.NOUN, case=WordCase.PAR, synt_link=SyntLink.NMOD),
+            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['темп', 'томп']
+
+
 def test_inflect_ru_phrase_with_eng():
     p = Phrase(
         head_pos=1, sent_pos_list=[0, 1], words=['народнолатинский', 'pernula'], deps=[1, None]
