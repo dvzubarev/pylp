@@ -68,14 +68,10 @@ class Sent:
         new_positions = []
         cur_pos = 0
         for word_pos, word_obj in enumerate(self._words):
-            filtered = False
             for filt in filter_list:
-                filtered = filt(word_obj, word_pos, self)
-                if filtered:
+                if filt(word_obj, word_pos, self):
+                    new_positions.append(-1)
                     break
-
-            if filtered:
-                new_positions.append(-1)
             else:
                 new_words.append(word_obj)
                 new_positions.append(cur_pos)
@@ -83,35 +79,30 @@ class Sent:
 
         if len(new_words) < len(new_positions):
             adjust_syntax_links(new_words, new_positions)
-            self._adjust_mwes(new_positions)
-            self._adjust_phrases(new_positions)
+            self._delete_dangling_mwes(new_words, new_positions)
+            self._delete_dangling_phrases(new_positions)
+            for phrase in self.phrases(with_mwe=True):
+                self._fix_sent_pos_in_phrase(phrase, new_positions)
         self._words = new_words
 
-    def _adjust_mwes(self, new_positions):
-        for word_obj in self._words:
+    def _delete_dangling_mwes(self, new_words, new_positions):
+        for word_obj in new_words:
             new_mwes = []
             for mwe_phrase in word_obj.mwes:
-                if self._fix_sent_pos_in_phrase(mwe_phrase, new_positions):
+                if all(new_positions[p] != -1 for p in mwe_phrase.get_sent_pos_list()):
                     new_mwes.append(mwe_phrase)
             word_obj.mwes = new_mwes
 
-    def _adjust_phrases(self, new_positions):
-        if not self._phrases:
-            return
-
+    def _delete_dangling_phrases(self, new_positions):
         new_phrases = []
         for phrase in self._phrases:
-            if self._fix_sent_pos_in_phrase(phrase, new_positions):
+            if all(new_positions[p] != -1 for p in phrase.get_sent_pos_list()):
                 new_phrases.append(phrase)
         self._phrases = new_phrases
 
     def _fix_sent_pos_in_phrase(self, phrase, new_positions):
-        if any(1 for p in phrase.get_sent_pos_list() if new_positions[p] == -1):
-            return False
-
         pos_list = [new_positions[p] for p in phrase.get_sent_pos_list()]
         phrase.set_sent_pos_list(pos_list)
-        return True
 
     def __len__(self) -> int:
         return len(self._words)
