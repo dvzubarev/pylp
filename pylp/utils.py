@@ -8,6 +8,8 @@ import libpyexbase
 from pylp import common
 from pylp.word_obj import WordObj
 
+# * Word id functions
+
 
 def word_id_combiner(words) -> int:
     w = words[0]
@@ -16,6 +18,7 @@ def word_id_combiner(words) -> int:
     return w
 
 
+# * Syntax helpers
 def adjust_syntax_links(new_sent: List[WordObj], new_positions: List[int]):
     """Example:
     old_sent: ['word', ',', 'word2', ':', 'word3']

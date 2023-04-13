@@ -98,10 +98,11 @@ class WordObj:
         if self._word_id is None:
             if self.lemma is None:
                 return None
+            l = self.lemma.lower()
             if self.lang is None:
-                self._word_id = libpyexbase.detect_lang_calc_word_id(self.lemma, True)
+                self._word_id = libpyexbase.detect_lang_calc_word_id(l, True)
             else:
-                self._word_id = libpyexbase.calc_word_id(self.lemma, self.lang, True)
+                self._word_id = libpyexbase.calc_word_id(l, self.lang, True)
         return self._word_id
 
     @word_id.setter

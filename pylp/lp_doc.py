@@ -4,6 +4,7 @@ import hashlib
 import logging
 from typing import Any, overload, Optional, Iterator, List, Tuple, Dict
 
+import libpyexbase
 
 from pylp import common
 
@@ -355,3 +356,23 @@ class Doc:
                 fragments_s.append(f"{name}: {frag}\n")
 
         return ''.join([s, text_s] + sents_s + fragments_s + ['\n', str(self._ling_meta)])
+
+
+def assign_word_ids_and_word_langs(doc_objects: list[Doc]):
+    unique_lemmas = set()
+    for doc_obj in doc_objects:
+        unique_lemmas.update(w.lemma.lower() for s in doc_obj for w in s if w.lemma is not None)
+
+    unique_lemmas = list(unique_lemmas)
+    word_ids, word_langs = libpyexbase.calc_word_ids_and_langs(unique_lemmas, True)
+
+    il_dict = {l: (i, la) for l, i, la in zip(unique_lemmas, word_ids, word_langs)}
+    for doc_obj in doc_objects:
+        doc_obj.add_ling_prop('word_lang_detected')
+        for sent in doc_obj:
+            for word_obj in sent:
+                if word_obj.lemma is None:
+                    continue
+                word_id, lang = il_dict[word_obj.lemma.lower()]
+                word_obj.word_id = word_id
+                word_obj.lang = common.Lang(lang)
