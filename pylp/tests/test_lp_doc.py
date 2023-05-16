@@ -38,7 +38,7 @@ def test_filter_words_with_mwe():
         WordObj(lemma='I.', pos_tag=PosTag.NOUN),
         WordObj(lemma='K.', pos_tag=PosTag.NOUN),
     ]
-    mwes = [Phrase(sent_pos_list=[2, 3], words=['I.', 'V.'])]
+    mwes = [Phrase(sent_pos_list=[2, 3], words=['I.', 'K.'])]
     words[2].mwes = mwes
 
     sent = lp_doc.Sent(words, phrases=mwes)
@@ -51,6 +51,29 @@ def test_filter_words_with_mwe():
     mwes_pos = words[1].mwes[0].get_sent_pos_list()
     assert mwes_pos == [1, 2]
     assert len(list(sent.phrases())) == 1
+
+
+def test_filter_mwes_but_not_phrases():
+    words = [
+        WordObj(lemma='Thin', pos_tag=PosTag.PROPN),
+        WordObj(lemma='Lizzy', pos_tag=PosTag.PROPN),
+        WordObj(lemma='temp', pos_tag=PosTag.ADP),
+        WordObj(lemma='thin', pos_tag=PosTag.ADJ),
+        WordObj(lemma='Lizzy', pos_tag=PosTag.NOUN),
+    ]
+    phrases = [Phrase(sent_pos_list=[0, 1], words=['Thin', 'Lizzy'])]
+    words[0].mwes = phrases
+    words[3].mwes = [Phrase(sent_pos_list=[3, 4], words=['thin', 'Lizzy'])]
+
+    sent = lp_doc.Sent(words, phrases=phrases)
+
+    sent.filter_words([filter1])
+
+    assert len(sent) == 4
+    words = list(sent.words())
+    assert words[2].mwes
+    mwes_pos = words[2].mwes[0].get_sent_pos_list()
+    assert mwes_pos == [2, 3]
 
 
 def test_from_dict():

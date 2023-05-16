@@ -52,9 +52,9 @@ class Sent:
 
         if with_mwe:
             # some MWEs already added to phrases
-            seen_phrases = frozenset(p.get_id() for p in self._phrases)
+            seen_phrases = frozenset(tuple(p.get_sent_pos_list()) for p in self._phrases)
             for mwe in self.mwes():
-                if mwe.get_id() not in seen_phrases:
+                if tuple(mwe.get_sent_pos_list()) not in seen_phrases:
                     yield mwe
 
     def mwes(self) -> Iterator[Phrase]:
