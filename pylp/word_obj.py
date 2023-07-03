@@ -243,3 +243,6 @@ class WordObj:
             parts_s.append(f"animacy: {es(self.animacy)}, ")
         parts_s[-1] = parts_s[-1][:-2]
         return ''.join(parts_s)
+
+    def __repr__(self) -> str:
+        return f"WordObj(pos_tag={self.pos_tag}, lemma={self.lemma}, word_id={self.word_id:x})"
