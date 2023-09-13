@@ -201,7 +201,7 @@ class WordObj:
         return word_obj
 
     def __str__(self) -> str:
-        es = common.enum2str
+        es = lambda ev: ev.name
         parts_s = [f"PoS: {es(self.pos_tag)}, "]
         if self.lemma is not None:
             parts_s.append(f"lemma: {self.lemma}, ")
