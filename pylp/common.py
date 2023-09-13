@@ -6,13 +6,17 @@ import enum
 
 def enum2str(enum_val):
     s = str(enum_val)
-    return s[s.index('.') + 1 :]
+    try:
+        i = s.index('.')
+    except ValueError:
+        i = -1
+    return s[i + 1 :]
 
 
 def _make_dict_for_enum(enum_cls, translator=None):
     if translator is None:
-        return {enum2str(v): v for v in enum_cls}
-    return {translator[enum2str(v)]: v for v in enum_cls}
+        return {enum2str(v.name): v for v in enum_cls}
+    return {translator[enum2str(v.name)]: v for v in enum_cls}
 
 
 def _make_list_for_enum(enum_cls):
