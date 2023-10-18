@@ -35,6 +35,7 @@
           pkgs.mkShell {
             inputsFrom = [ pypkgs.pylp ];
             buildInputs = [
+              pypkgs.pip
               pkgs.pyright
               pypkgs.pylint
               pypkgs.black

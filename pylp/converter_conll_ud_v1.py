@@ -1,5 +1,6 @@
 import logging
 from io import StringIO
+import re
 
 from pylp import common
 from pylp import lp_doc
@@ -178,11 +179,10 @@ class ConverterConllUDV1:
         cur_text_pos = 0
         try:
             for conllu_sent in ConllFormatStreamParser(conll_raw_text):
-
                 sent = lp_doc.Sent()
 
                 for word in conllu_sent:
-                    if word[0].startswith('#'):
+                    if word[0].startswith('#') or re.match(r'(\d+)[\.-](\d+)', word[0]) is not None:
                         continue
                     word_obj = self._create_word_obj(len(sent), word)
 

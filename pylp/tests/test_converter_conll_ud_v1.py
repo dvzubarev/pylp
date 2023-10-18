@@ -294,3 +294,28 @@ def test_picking_alt_synt_link_2():
     word1_3 = sent1[2]
     assert word1_3.parent_offs == 1
     assert word1_3.synt_link == common.SyntLink.CONJ
+
+
+TEXT_6 = "163196 cannot detect"
+CONLLU_TEXT_6 = """# text = 163196 cannot detect
+3	163196	_	NUM	_	_	1	nmod	_	_
+4-5	cannot	_	_	_	_	_	_	_	_
+4	can	_	AUX	_	VerbForm=Fin	6	aux	_	_
+5	not	_	PART	_	Polarity=Neg	6	advmod	_	_
+6	detect	_	VERB	_	VerbForm=Inf	0	root	_	_
+
+"""
+
+
+def test_skipping_multiword_expressions():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('7')
+
+    converter(TEXT_6, CONLLU_TEXT_6, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word2 = sent1[1]
+    assert word2.form == 'can'
+    word3 = sent1[2]
+    assert word3.form == 'not'
