@@ -319,3 +319,28 @@ def test_skipping_multiword_expressions():
     assert word2.form == 'can'
     word3 = sent1[2]
     assert word3.form == 'not'
+
+
+TEXT_7 = "s/he would assign"
+CONLLU_TEXT_7 = """# text = s/he would assign
+30	s/he	_	PRON	_	Case=Nom|Gender=Fem,Masc|Number=Sing|Person=3	32	nsubj	_	_
+31	would	_	AUX	_	VerbForm=Fin|Gender=unk	32	aux	_	_
+32	assign	_	VERB	_	VerbForm=Inf	13	conj	_	_
+
+"""
+
+
+def test_skipping_multiword_expressions():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('8')
+
+    converter(TEXT_7, CONLLU_TEXT_7, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word1 = sent1[0]
+    assert word1.form == 's/he'
+    assert word1.gender == common.WordGender.NONBIN
+    word2 = sent1[1]
+    assert word2.form == 'would'
+    assert word2.gender == common.WordGender.OTHER

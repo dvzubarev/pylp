@@ -118,10 +118,13 @@ class WordNumber(enum.IntEnum):
 WORD_NUMBER_DICT = _make_dict_for_enum(WordNumber)
 
 class WordGender(enum.IntEnum):
-    UNDEF = 0
-    MASC  = 1
-    FEM   = 2
-    NEUT  = 3
+    UNDEF  = 0
+    MASC   = 1
+    FEM    = 2
+    NEUT   = 3
+    COM    = 4
+    NONBIN = 5
+    OTHER  = 6
 
 WORD_GENDER_DICT = _make_dict_for_enum(WordGender)
 

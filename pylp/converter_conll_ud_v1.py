@@ -36,7 +36,13 @@ def _assign_morph_features(word_obj: WordObj, morph_feats, pos_tag):
     if 'Number' in morph_feats:
         word_obj.number = common.WORD_NUMBER_DICT[morph_feats['Number'].upper()]
     if 'Gender' in morph_feats:
-        word_obj.gender = common.WORD_GENDER_DICT[morph_feats['Gender'].upper()]
+        try:
+            word_obj.gender = common.WORD_GENDER_DICT[morph_feats['Gender'].upper()]
+        except KeyError:
+            if morph_feats['Gender'] == 'Fem,Masc':
+                word_obj.gender = common.WordGender.NONBIN
+            else:
+                word_obj.gender = common.WordGender.OTHER
 
     if 'Case' in morph_feats:
         word_obj.case = common.WORD_CASE_DICT[morph_feats['Case'].upper()]
