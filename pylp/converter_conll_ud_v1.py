@@ -182,7 +182,8 @@ class ConverterConllUDV1:
         Returns:
         lp_doc.Doc
         """
-        cur_text_pos = 0
+        offs_gen = self._offset_gen(text)
+        next(offs_gen)
         try:
             for conllu_sent in ConllFormatStreamParser(conll_raw_text):
                 sent = lp_doc.Sent()
@@ -192,16 +193,11 @@ class ConverterConllUDV1:
                         continue
                     word_obj = self._create_word_obj(len(sent), word)
 
-                    # set offsets of a word in the text
-                    begin = text.find(word_obj.form, cur_text_pos)
-                    if begin == -1:
-                        raise RuntimeError(
-                            f"Failed to find form {word_obj.form} in text: {text[cur_text_pos: cur_text_pos+50]}"
-                        )
-                    word_obj.offset = begin
                     assert word_obj.form is not None, "not initialized form"
-                    word_obj.len = len(word_obj.form)
-                    cur_text_pos = begin + word_obj.len
+                    # set offsets of a word in the text
+                    begin, length = offs_gen.send(word_obj.form)
+                    word_obj.offset = begin
+                    word_obj.len = length
 
                     sent.add_word(word_obj)
                 doc.add_sent(sent)
@@ -214,6 +210,34 @@ class ConverterConllUDV1:
             raise
 
         return doc
+
+    def _offset_gen(self, text: str):
+        def _special_cases(form, cur_pos):
+            if ' ' in form:
+                # special case when space is in a token
+                # there may be multiple spaces or newlines in a text
+                # But they are replaced with a single space in a form of a token
+                form_reg = re.compile(form.replace(' ', r'\s+'))
+                if (match := form_reg.search(text, cur_pos)) is not None:
+                    idx = match.start()
+                    length = len(match.group())
+                    return idx, length
+            return -1, -1
+
+        form = yield None, None
+        cur_pos = 0
+        while cur_pos < len(text):
+            idx = text.find(form, cur_pos)
+            if idx == -1:
+                idx, length = _special_cases(form, cur_pos)
+                if idx == -1:
+                    raise RuntimeError(
+                        f"Failed to find form {form} in text: {text[cur_pos: cur_pos+50]}"
+                    )
+            else:
+                length = len(form)
+            cur_pos = idx + length
+            form = yield idx, length
 
     def _create_word_obj(self, pos, word):
         # pos_tag = convert_upos_tag(word[self.POSTAG])

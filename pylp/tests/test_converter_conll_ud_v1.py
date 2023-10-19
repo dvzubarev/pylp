@@ -344,3 +344,55 @@ def test_skipping_multiword_expressions():
     word2 = sent1[1]
     assert word2.form == 'would'
     assert word2.gender == common.WordGender.OTHER
+
+
+TEXT_8 = "Equation 1].\n0=0 if i<4"
+CONLLU_TEXT_8 = """# text = Equation 1]. 0=0 if i<4
+10	Equation	_	PROPN	_	Number=Sing	2	parataxis	_	_
+11	1	_	NUM	_	_	10	dep	_	SpaceAfter=No
+12	]. 0=0	_	NUM	_	_	11	flat	_	_
+13	if	_	SCONJ	_	_	14	mark	_	_
+14	i<4	_	X	_	_	2	parataxis	_	SpaceAfter=No
+
+"""
+
+
+def test_tokens_with_spaces_1():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('9')
+
+    converter(TEXT_8, CONLLU_TEXT_8, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word3 = sent1[2]
+    assert word3.form == ']. 0=0'
+    assert word3.len == 6
+    assert word3.offset == 10
+    assert TEXT_8[word3.offset : word3.offset + word3.len] == '].\n0=0'
+
+
+TEXT_8_2 = "Equation 1]. \n 0=0 if i<4"
+CONLLU_TEXT_8_2 = """# text = Equation 1]. 0=0 if i<4
+10	Equation	_	PROPN	_	Number=Sing	2	parataxis	_	_
+11	1	_	NUM	_	_	10	dep	_	SpaceAfter=No
+12	]. 0=0	_	NUM	_	_	11	flat	_	_
+13	if	_	SCONJ	_	_	14	mark	_	_
+14	i<4	_	X	_	_	2	parataxis	_	SpaceAfter=No
+
+"""
+
+
+def test_tokens_with_spaces_2():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('10')
+
+    converter(TEXT_8_2, CONLLU_TEXT_8_2, doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word3 = sent1[2]
+    assert word3.form == ']. 0=0'
+    assert word3.len == 8
+    assert word3.offset == 10
+    assert TEXT_8_2[word3.offset : word3.offset + word3.len] == ']. \n 0=0'
