@@ -19,12 +19,12 @@ from pylp import lp_doc
 from pylp.word_obj import WordObj
 
 
-def _find_dict_path(explicit_path=''):
+def _find_dict_path(explicit_path='', pylp_resources_dir=''):
     if explicit_path:
         return explicit_path
 
-    res_dir = os.environ.get('PYLP_RESOURCES_DIR')
-    if res_dir is None:
+    res_dir = os.environ.get('PYLP_RESOURCES_DIR', pylp_resources_dir)
+    if not res_dir:
         raise RuntimeError("Env var PYLP_RESOURCES_DIR is not set!")
 
     name = os.environ.get('PYLP_LEMMAS_DICT_NAME', 'lemma.ruen.v1.pickle.gz')
@@ -42,9 +42,8 @@ class Lemmatizer(AbcLemmatizer):
     """General dict-based lemmatizier"""
 
     def __init__(self, *args, **kwargs):
-        dicts_path = _find_dict_path()
+        dicts_path = _find_dict_path(pylp_resources_dir=kwargs.get('pylp_resources_dir', ''))
         with gzip.open(dicts_path, 'rb') as inpf:
-
             self._lemmas_dict: LemmasDictType = pickle.load(inpf)
         self._lang_lemmatizers: Mapping[lp.Lang, AbcLemmatizer] = {
             lp.Lang.RU: RuLemmatizer(*args, **kwargs),

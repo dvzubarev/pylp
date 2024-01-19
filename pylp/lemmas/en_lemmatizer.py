@@ -63,8 +63,8 @@ _ADJ_SUP_RULES = [
 
 
 class EnLemmatizer(AbcLemmatizer):
-    def __init__(self, **_):
-        self._res_dir = os.environ.get('PYLP_RESOURCES_DIR')
+    def __init__(self, **kwargs):
+        self._res_dir = os.environ.get('PYLP_RESOURCES_DIR', kwargs.get('pylp_resources_dir', None))
         if self._res_dir is None:
             raise RuntimeError("Env var PYLP_RESOURCES_DIR is not set!")
 
