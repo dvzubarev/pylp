@@ -38,8 +38,10 @@ def create_filter_by_pos_tags(sw_pos_tags):
 
 
 class AbcFilter:
+    name = 'abc'
+
     def __init__(self, **kwargs):
-        pass
+        self._logger = logging.getLogger(f"Filtratus.{self.name}")
 
     def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
         raise NotImplementedError("ABC")
@@ -69,7 +71,6 @@ class CommonAuxFiltratus(AbcFilter):
         self._common_aux = frozenset(['be', 'have', 'быть', 'do'])
 
     def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
-
         # cop - https://universaldependencies.org/u/dep/cop.html
         # cop is used for be
         return (word_obj.pos_tag == PosTag.AUX and word_obj.lemma in self._common_aux) or (
@@ -91,9 +92,9 @@ class StopWordsFiltratus(AbcFilter):
         super().__init__(**kwargs)
 
         self._stop_words = load_words_list(sw_list_path)
-        logging.info("Loaded %d stopwords", len(self._stop_words))
+        self._logger.info("Loaded %d stopwords", len(self._stop_words))
         self._white_list = load_words_list(sw_white_list_path)
-        logging.info("Loaded %d words from white list", len(self._white_list))
+        self._logger.info("Loaded %d words from white list", len(self._white_list))
 
         if sw_pos_tags is None:
             self._sw_pos_tags = frozenset(STOP_WORD_POS_TAGS)
@@ -101,7 +102,6 @@ class StopWordsFiltratus(AbcFilter):
             self._sw_pos_tags = frozenset(sw_pos_tags)
 
     def filter(self, word_obj: WordObj, word_pos: int, sent: lp_doc.Sent):
-
         if self._white_list and word_obj.lemma in self._white_list:
             return False
 
