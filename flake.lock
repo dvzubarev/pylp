@@ -2,16 +2,16 @@
   "nodes": {
     "nixpkgs": {
       "locked": {
-        "lastModified": 1693944807,
-        "narHash": "sha256-k19P85aCluF+PhUVhpSi61PEyhVz/Fw7+lxA+SyYwvQ=",
+        "lastModified": 1717158330,
+        "narHash": "sha256-eetRoTcehuu/9DzNEx+Jgdu4Un5x12ehQbK6YK2hgdA=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "11226b1a182da75959a3b2ca6bae7aa8bb9c8ef9",
+        "rev": "7ec74c627b767a23ea23cb0de93c2d1f6a5f09cc",
         "type": "github"
       },
       "original": {
         "id": "nixpkgs",
-        "rev": "11226b1a182da75959a3b2ca6bae7aa8bb9c8ef9",
+        "rev": "7ec74c627b767a23ea23cb0de93c2d1f6a5f09cc",
         "type": "indirect"
       }
     },
@@ -22,11 +22,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1694080943,
-        "narHash": "sha256-/ek409ZWSJelXltRyY9v/D63AWts1yyWFzwI1O+o30c=",
+        "lastModified": 1717536612,
+        "narHash": "sha256-rGqN4jihClzscv0vp6xvSZQJ/rVU3c0z057XnEN6oWw=",
         "ref": "refs/heads/master",
-        "rev": "1322ee36ab125df8f20f6ea0702f915be8fc3888",
-        "revCount": 21,
+        "rev": "ccc2cd9f118ea5efdd7884919b10ca54590ca120",
+        "revCount": 22,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/pyexbase"
       },
@@ -46,11 +46,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1694080666,
-        "narHash": "sha256-quIWQYwzFexDIHrK4Dyy65oN/6eH4/nEOsWJAZgIbHs=",
+        "lastModified": 1717536247,
+        "narHash": "sha256-6aYcSuer6YYi97A2sxs3KAHLMw5ZS4Bo9DS511u4Fr8=",
         "ref": "refs/heads/master",
-        "rev": "48316992aeee58a9546b965e31b6ebe0a602fb4c",
-        "revCount": 174,
+        "rev": "16c28e4812605a0e990a5b32d42bcc7b839d35ac",
+        "revCount": 196,
         "type": "git",
         "url": "ssh://git@tsa04.isa.ru/textapp/textapp-pkgs"
       },

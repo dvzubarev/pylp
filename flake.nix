@@ -35,15 +35,13 @@
           pkgs.mkShell {
             inputsFrom = [ pypkgs.pylp ];
             buildInputs = [
-              pypkgs.pip
               pkgs.pyright
               pypkgs.pylint
               pypkgs.black
               pypkgs.ipykernel
               pypkgs.debugpy
+              pkgs.pythonDevHook
             ];
-
-            shellHook=''[ -z "$PS1" ] && export PYTHONPATH=`pwd`:$PYTHONPATH || setuptoolsShellHook'';
 
           };
     };
