@@ -5,6 +5,7 @@ import gzip
 import json
 import importlib.resources
 from typing import List, MutableMapping, Mapping, Optional
+import collections
 
 import pymorphy2
 
@@ -24,7 +25,9 @@ from pylp.phrases.builder import MWE_RELS
 from pylp.word_obj import WordObj
 
 
-# Abstract classes
+# * Abstract classes
+
+
 class Inflector:
     def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         raise NotImplementedError("inflect head is not implemented")
@@ -54,7 +57,7 @@ class VerbExcpForms:
         return f"VerbExcpForms(pres_part={self.pres_part}, past_part={self.past_part})"
 
 
-# API
+# * API
 
 
 def inflect_phrases(phrases: List[Phrase], sent: lp_doc.Sent, text_lang):
@@ -62,15 +65,26 @@ def inflect_phrases(phrases: List[Phrase], sent: lp_doc.Sent, text_lang):
         inflect_phrase(phrase, sent, text_lang)
 
 
-def inflect_phrase(phrase: Phrase, sent: lp_doc.Sent, text_lang):
+def inflect_phrase(phrase: Phrase, sent: lp_doc.Sent, text_lang, cache_max_size: int = -1):
+    """
+    When cache_max_size == 0, use cache with unbounded size, when its value <= -1 do not use cache at all.
+    In other cases cache_max_size is the number of phrases that are stored in the cache at the same time.
+    """
+    cache_key, result = _cache_lookup(phrase, sent, cache_max_size)
+    if result is not None:
+        phrase.get_words()[:] = result
+        return
+
     word_lang_func = lambda o: text_lang if o.lang is None else o.lang
     word_langs = [word_lang_func(sent[i]) for i in phrase.get_sent_pos_list()]
     if any(l == Lang.RU for l in word_langs):
-        return inflect_ru_phrase(phrase, sent)
-    if any(l == Lang.EN for l in word_langs):
-        return inflect_en_phrase(phrase, sent)
+        inflect_ru_phrase(phrase, sent)
+    elif any(l == Lang.EN for l in word_langs):
+        inflect_en_phrase(phrase, sent)
+    else:
+        raise RuntimeError(f"Unsupported language in phrase to inflect: {phrase}")
 
-    raise RuntimeError(f"Unsupported language in phrase to inflect: {phrase}")
+    _put_to_cache(cache_key, phrase.get_words(), cache_max_size)
 
 
 def inflect_ru_phrase(phrase: Phrase, sent: lp_doc.Sent):
@@ -83,7 +97,8 @@ def inflect_en_phrase(phrase: Phrase, sent: lp_doc.Sent):
     inflector.inflect_phrase(phrase, sent)
 
 
-# Implementation
+# * Implementation
+# ** Common
 
 
 def _capitalize(word):
@@ -124,6 +139,8 @@ class BaseInflector(Inflector):
                 # recursively inflect modificators of inflected modificator
                 self._inflect_phrase_impl(phrase, sent, mod_pos)
 
+
+# ** Ru impl
 
 RU_INFLECTOR = None
 
@@ -341,6 +358,8 @@ class RuInflector(BaseInflector):
         return None
 
 
+# ** En Impl
+
 EN_INFLECTOR = None
 
 
@@ -499,3 +518,52 @@ class EnInflector(BaseInflector):
 
         if form is not None:
             phrase_words[mod_pos] = form
+
+
+# * Cache
+#
+_CACHE = collections.OrderedDict()
+_CACHE_HITS = 0
+_CACHE_MISSES = 0
+
+
+def get_inflect_cache_info():
+    return len(_CACHE), _CACHE_HITS, _CACHE_MISSES
+
+
+def _cache_lookup(phrase: Phrase, sent: lp_doc.Sent, cache_max_size: int):
+    global _CACHE_HITS, _CACHE_MISSES
+    if cache_max_size <= -1:
+        return tuple(), None
+
+    parts = []
+    for wp in phrase.get_sent_pos_list():
+        word_obj = sent[wp]
+        parts.append(
+            (
+                word_obj.word_id,
+                word_obj.pos_tag,
+                word_obj.case,
+                word_obj.number,
+                word_obj.gender,
+                word_obj.voice,
+                word_obj.tense,
+            )
+        )
+    key = tuple(parts)
+    result = _CACHE.get(key)
+    if result is not None:
+        _CACHE_HITS += 1
+        _CACHE.move_to_end(key)
+    else:
+        _CACHE_MISSES += 1
+
+    return key, result
+
+
+def _put_to_cache(key: tuple, result, cache_max_size: int):
+    if cache_max_size <= -1:
+        return
+    _CACHE[key] = result
+    if len(_CACHE) > cache_max_size:
+        _CACHE.popitem(last=False)
