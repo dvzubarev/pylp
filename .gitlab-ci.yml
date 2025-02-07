@@ -1,9 +1,6 @@
-variables:
-  BUILD_FLAKE: git+ssh://git@tsa04.isa.ru/util/nix#build
-
 build-job:
   stage: build
   script:
-    - nix run "$BUILD_FLAKE" -- -i .
+    - nix run build-utils -- -i .
   tags:
     - nix

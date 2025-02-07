@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import pytest
+
 from pylp import lp_doc
 
 from pylp.phrases.util import add_phrases_to_doc
 import pylp.common as lp
 from pylp.word_obj import WordObj
-
-import pytest
 
 
 def _mkw(lemma, link, PoS=lp.PosTag.UNDEF, link_kind=None):

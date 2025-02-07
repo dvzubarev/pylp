@@ -2,7 +2,7 @@
 
 import copy
 from typing import List, Optional, Tuple
-from enum import Enum
+from enum import IntEnum
 
 import libpyexbase
 import pylp.common as lp
@@ -91,7 +91,7 @@ class HeadModifier:
         hm.repr_mod_suffix = dic['repr_mod_suffix']
 
 
-class ReprEnhType(Enum):
+class ReprEnhType(IntEnum):
     ADD_WORD = 0
     ADD_SUFFIX = 1
 
@@ -237,11 +237,11 @@ class Phrase:
     def to_dict(self):
         return {
             'head_pos': self._head_pos,
-            'sent_pos_lis': self._sent_pos_list,
+            'sent_pos_list': self._sent_pos_list,
             'words': self._words,
             'deps': self._deps,
             'head_mod': self._head_modifier.to_dict(),
-            'repr_modifierrs': [
+            'repr_modifiers': [
                 [m.to_dict() for m in mod_list] if mod_list is not None else None
                 for mod_list in self._repr_modifiers
             ],

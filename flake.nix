@@ -40,7 +40,7 @@
               pypkgs.black
               pypkgs.ipykernel
               pypkgs.debugpy
-              pkgs.pythonDevHook
+              pypkgs.pythonDevHook
             ];
 
           };
