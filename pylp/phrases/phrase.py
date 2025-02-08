@@ -61,12 +61,15 @@ class PhraseId:
         return self
 
     def to_dict(self):
-        return {'prep_id': self._prep_id, 'id': self._id}
+        d = {'id': self._id}
+        if self._prep_id is not None:
+            d['prep_id'] = self._prep_id
+        return d
 
     @classmethod
     def from_dict(cls, dic):
         phrase_id = cls()
-        phrase_id._prep_id = dic['prep_id']
+        phrase_id._prep_id = dic.get('prep_id')
         phrase_id._id = dic['id']
         return phrase_id
 
@@ -81,14 +84,20 @@ class HeadModifier:
         self.prep_modifier = prep_modifier
         self.repr_mod_suffix = repr_mod_suffix
 
-    def to_dict(self):
-        return {'prep_mod': self.prep_modifier, 'repr_mod_suffix': self.repr_mod_suffix}
+    def to_dict(self, use_shorthand_keys: bool = False):
+        if self.prep_modifier is None and self.repr_mod_suffix is None:
+            return {}
+        return {
+            'p' if use_shorthand_keys else 'prep_mod': self.prep_modifier,
+            'r' if use_shorthand_keys else 'repr_mod_suffix': self.repr_mod_suffix,
+        }
 
     @classmethod
     def from_dict(cls, dic):
         hm = cls()
-        hm.prep_modifier = dic['prep_mod']
-        hm.repr_mod_suffix = dic['repr_mod_suffix']
+        use_shorthand_keys = 'prep_mod' in dic
+        hm.prep_modifier = dic.get('p' if use_shorthand_keys else 'prep_mod')
+        hm.repr_mod_suffix = dic.get('r' if use_shorthand_keys else 'repr_mod_suffix')
 
 
 class ReprEnhType(IntEnum):
@@ -102,12 +111,21 @@ class ReprEnhancer:
         self.enh_type = enh_type
         self.value = value
 
-    def to_dict(self):
-        return {'rel_pos': self.rel_pos, 'enh_type': self.enh_type, 'value': self.value}
+    def to_dict(self, use_shorthand_keys: bool = False):
+        return {
+            'p' if use_shorthand_keys else 'rel_pos': self.rel_pos,
+            'e' if use_shorthand_keys else 'enh_type': self.enh_type,
+            'v' if use_shorthand_keys else 'value': self.value,
+        }
 
     @classmethod
     def from_dict(cls, dic):
-        return cls(dic['rel_pos'], dic['enh_type'], dic['value'])
+        use_shorthand_keys = 'rel_pos' not in dic
+        return cls(
+            dic['p' if use_shorthand_keys else 'rel_pos'],
+            dic['e' if use_shorthand_keys else 'enh_type'],
+            dic['v' if use_shorthand_keys else 'value'],
+        )
 
 
 class Phrase:
@@ -234,33 +252,49 @@ class Phrase:
                 j += 1
         return True
 
-    def to_dict(self):
-        return {
-            'head_pos': self._head_pos,
-            'sent_pos_list': self._sent_pos_list,
-            'words': self._words,
-            'deps': self._deps,
-            'head_mod': self._head_modifier.to_dict(),
-            'repr_modifiers': [
-                [m.to_dict() for m in mod_list] if mod_list is not None else None
-                for mod_list in self._repr_modifiers
-            ],
-            'id_holder': self._id_holder.to_dict(),
+    def to_dict(self, use_shorthand_keys: bool = False):
+        d = {
+            'h' if use_shorthand_keys else 'head_pos': self._head_pos,
+            'p' if use_shorthand_keys else 'sent_pos_list': self._sent_pos_list,
+            'w' if use_shorthand_keys else 'words': self._words,
+            'd' if use_shorthand_keys else 'deps': self._deps,
+            'i' if use_shorthand_keys else 'id_holder': self._id_holder.to_dict(),
         }
+        if hdd := self._head_modifier.to_dict(use_shorthand_keys=use_shorthand_keys):
+            d['hm' if use_shorthand_keys else 'head_mod'] = hdd
+
+        if self._repr_modifiers:
+            if any(m is not None for m in self._repr_modifiers):
+                repr_modifiers = [
+                    (
+                        [m.to_dict(use_shorthand_keys=use_shorthand_keys) for m in mod_list]
+                        if mod_list is not None
+                        else None
+                    )
+                    for mod_list in self._repr_modifiers
+                ]
+                d['r' if use_shorthand_keys else 'repr_modifiers'] = repr_modifiers
+        return d
 
     @classmethod
     def from_dict(cls, dic):
+        use_shorthand_keys = 'head_pos' not in dic and 'h' in dic
         phrase = cls()
-        phrase._head_pos = dic['head_pos']
-        phrase._sent_pos_list = dic['sent_pos_list']
-        phrase._words = dic['words']
-        phrase._deps = dic['deps']
-        phrase._head_modifier = HeadModifier.from_dict(dic['head_mod'])
+        phrase._head_pos = dic['h' if use_shorthand_keys else 'head_pos']
+        phrase._sent_pos_list = dic['p' if use_shorthand_keys else 'sent_pos_list']
+        phrase._words = dic['w' if use_shorthand_keys else 'words']
+        phrase._deps = dic['d' if use_shorthand_keys else 'deps']
+        phrase._head_modifier = HeadModifier.from_dict(
+            dic.get('hm' if use_shorthand_keys else 'head_mod', {})
+        )
         phrase._repr_modifiers = [
             [ReprEnhancer.from_dict(d) for d in mod_list] if mod_list is not None else None
-            for mod_list in dic['repr_modifiers']
+            for mod_list in dic.get('r' if use_shorthand_keys else 'repr_modifiers', [])
         ]
-        phrase._id_holder = PhraseId.from_dict(dic['id_holder'])
+        if not phrase._repr_modifiers:
+            phrase._repr_modifiers = [None] * len(phrase._sent_pos_list)
+        phrase._id_holder = PhraseId.from_dict(dic['i' if use_shorthand_keys else 'id_holder'])
+        phrase._size = len(phrase._sent_pos_list)
         return phrase
 
     def __repr__(self) -> str:

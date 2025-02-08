@@ -3,7 +3,7 @@
 
 
 from pylp.phrases.inflect import inflect_ru_phrase, inflect_phrase
-from pylp.phrases.phrase import Phrase, HeadModifier
+from pylp.phrases.phrase import Phrase
 from pylp.common import (
     PosTag,
     WordGender,
@@ -17,6 +17,8 @@ from pylp.common import (
 
 from pylp.word_obj import WordObj
 from pylp import lp_doc
+
+# * Ru Inflect tests
 
 
 def test_simple_adj_inflect():
@@ -486,6 +488,9 @@ def test_ru_propn_inflect5():
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words() == ['шляпа', 'Ивана', 'Иванова']
+
+
+# * En inflect tests
 
 
 def test_simple_en_pres_part_inflect_1():
