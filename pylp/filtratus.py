@@ -18,6 +18,8 @@ class Filtratus:
 
     def __init__(self, kinds, filters_kwargs):
         self._filters = {}
+        if not kinds:
+            kinds = ['punct', 'determiner', 'common_aux', 'stopwords', 'num&undeflang']
         for k in kinds:
             self._filters[k] = create_filtratus(k, **filters_kwargs)
 
