@@ -278,12 +278,12 @@ class Phrase:
 
     @classmethod
     def from_dict(cls, dic):
-        use_shorthand_keys = 'head_pos' not in dic and 'h' in dic
+        use_shorthand_keys = 'id_holder' not in dic and 'i' in dic
         phrase = cls()
-        phrase._head_pos = dic['h' if use_shorthand_keys else 'head_pos']
-        phrase._sent_pos_list = dic['p' if use_shorthand_keys else 'sent_pos_list']
-        phrase._words = dic['w' if use_shorthand_keys else 'words']
-        phrase._deps = dic['d' if use_shorthand_keys else 'deps']
+        phrase._head_pos = dic.get('h' if use_shorthand_keys else 'head_pos', 0)
+        phrase._sent_pos_list = dic.get('p' if use_shorthand_keys else 'sent_pos_list', [])
+        phrase._words = dic.get('w' if use_shorthand_keys else 'words', [])
+        phrase._deps = dic.get('d' if use_shorthand_keys else 'deps', [])
         phrase._head_modifier = HeadModifier.from_dict(
             dic.get('hm' if use_shorthand_keys else 'head_mod', {})
         )
