@@ -16,29 +16,32 @@ from pylp.phrases.builder import (
 from pylp.phrases.phrase import Phrase
 
 from pylp import lp_doc
-from pylp.word_obj import WordObj
 
 
-def _add_mwe_to_words(
-    sent_words: List[WordObj],
-    phrases: Iterable[Phrase],
-):
+def keep_non_overlapping_phrases(phrases: Iterable[Phrase]) -> list[Phrase]:
+    """Exclude phrases that are completely overlapped by other phrases. For
+    example, if input phrases are [(1, 2), (1,2,3,4), (4,5)] (phrases are
+    represented by their positions in the sentence). This function returns
+    [(1,2,3,4), (4,5)]. Returned phrases are sorted by the size.
+    """
 
     sorted_phrases = sorted(phrases, key=lambda p: -p.size())
     if not sorted_phrases:
-        return
+        return []
 
-    added_phrases: list[list[Phrase]] = [[] for _ in range(len(sent_words))]
+    seen_phrases: dict[int, list[Phrase]] = collections.defaultdict(list)
+    new_phrases = []
     for p in sorted_phrases:
         for pos in p.get_sent_pos_list():
-            if (head_phrases := added_phrases[pos]) and any(hp.contains(p) for hp in head_phrases):
+            if (head_phrases := seen_phrases[pos]) and any(hp.contains(p) for hp in head_phrases):
                 # phrase is completely overlapped by already added phrase
                 break
         else:
-            head_word = sent_words[p.sent_hp()]
-            head_word.mwes.append(p)
+            new_phrases.append(p)
             for pos in p.get_sent_pos_list():
-                added_phrases[pos].append(p)
+                seen_phrases[pos].append(p)
+
+    return new_phrases
 
 
 def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
@@ -73,17 +76,20 @@ def add_phrases_to_doc(
     else:
         mwe_size = mwe_opts.mwe_size
     mwe_builder: BasicPhraseBuilder = builder_cls(mwe_size, mwe_opts)
-    for sent in doc_obj:
-        phrases = mwe_builder.build_phrases_for_sent(sent)
-        _add_mwe_to_words(list(sent.words()), phrases)
 
     if builder_opts is None:
         builder_opts = PhraseBuilderOpts()
-
     builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
 
     for sent in doc_obj:
-        phrases = builder.build_phrases_for_sent(sent)
+        # MWEs are extracted using more efficient greedy algorithm.
+        mwes = mwe_builder.build_phrases_for_sent(sent)
+        # MWEs could be used to produce other phrases.
+        # For example, mod1 + (MWE_head, MWE_mod1, ...)
+        # So use them as init phrases, so builder could use them.
+        mwes = keep_non_overlapping_phrases(mwes)
+
+        phrases = builder.build_phrases_for_sent(sent, init_phrases=mwes)
         sent.set_phrases(phrases)
     if min_cnt:
         remove_rare_phrases(doc_obj, min_cnt=min_cnt)

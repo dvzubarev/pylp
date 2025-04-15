@@ -9,6 +9,7 @@ from pylp.phrases.builder import (
     PhraseBuilder,
     PhraseBuilderOpts,
 )
+from pylp.phrases.phrase import PhraseType
 from pylp.phrases.util import replace_words_with_phrases, add_phrases_to_doc
 import pylp.common as lp
 from pylp.word_obj import WordObj
@@ -62,10 +63,10 @@ def test_add_phrases_to_doc():
     add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
     sent0 = doc_obj[0]
-    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases = [(p.get_str_repr(), p.size()) for p in sent0.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 3
-    assert str_phrases == ['h1 of h2', 'h1 of m1 h2', 'm1 h2']
+    assert str_phrases == [('h1 of h2', 2), ('h1 of m1 h2', 3), ('m1 h2', 2)]
 
     sent1 = doc_obj[1]
     str_phrases = [p.get_str_repr() for p in sent1.phrases()]
@@ -134,3 +135,29 @@ def test_replace():
     assert len(new_sent) == 4
     sent_phrases = [_p2str(p) if isinstance(p, Phrase) else p for p in new_sent]
     assert sent_phrases == ['r_m1_h1', None, None, 'h2']
+
+
+def _create_doc_obj_with_mwes():
+    sents = [
+        lp_doc.Sent(
+            [
+                _mkw('h1', 0, lp.PosTag.NOUN, lp.SyntLink.ROOT),
+                _mkw('Iv', -1, lp.PosTag.PROPN, lp.SyntLink.NMOD),
+                _mkw('I.', -1, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+                _mkw('V.', -2, lp.PosTag.PROPN, lp.SyntLink.FLAT),
+            ]
+        ),
+    ]
+
+    return lp_doc.Doc('id', sents=sents)
+
+
+def test_add_phrases_to_doc_with_mwes():
+    doc_obj = _create_doc_obj_with_mwes()
+    add_phrases_to_doc(doc_obj, 4, min_cnt=0)
+
+    sent0 = doc_obj[0]
+    str_phrases = [(p.get_str_repr(), p.size(), p.phrase_type) for p in sent0.phrases()]
+    str_phrases.sort()
+    assert len(str_phrases) == 2
+    assert str_phrases == [('Iv I. V.', 3, PhraseType.MWE), ('h1 Iv I. V.', 4, PhraseType.DEFAULT)]

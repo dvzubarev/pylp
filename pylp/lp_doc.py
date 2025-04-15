@@ -9,7 +9,7 @@ import libpyexbase
 from pylp import common
 
 from pylp.word_obj import WordObj
-from pylp.phrases.phrase import Phrase
+from pylp.phrases.phrase import Phrase, PhraseType
 from pylp.utils import adjust_syntax_links
 
 
@@ -36,8 +36,7 @@ class Sent:
         self._words.append(word_obj)
 
     def words(self) -> Iterator[WordObj]:
-        for w in self._words:
-            yield w
+        yield from self._words
 
     def set_words(self, new_words: List[WordObj]):
         if self._words and len(new_words) < len(self._words) and self._phrases:
@@ -47,19 +46,19 @@ class Sent:
 
         self._words = new_words
 
-    def phrases(self, with_mwe=False) -> Iterator[Phrase]:
-        yield from self._phrases
-
+    def phrases(self, with_mwe=True) -> Iterator[Phrase]:
         if with_mwe:
-            # some MWEs already added to phrases
-            seen_phrases = frozenset(tuple(p.get_sent_pos_list()) for p in self._phrases)
-            for mwe in self.mwes():
-                if tuple(mwe.get_sent_pos_list()) not in seen_phrases:
-                    yield mwe
+            yield from self._phrases
+        else:
+            for p in self._phrases:
+                if p.phrase_type == PhraseType.MWE:
+                    continue
+                yield p
 
     def mwes(self) -> Iterator[Phrase]:
-        for word_obj in self._words:
-            yield from word_obj.mwes
+        for p in self._phrases:
+            if p.phrase_type == PhraseType.MWE:
+                yield p
 
     def set_phrases(self, phrases):
         self._phrases = phrases
@@ -80,19 +79,10 @@ class Sent:
 
         if len(new_words) < len(new_positions):
             adjust_syntax_links(new_words, new_positions)
-            self._delete_dangling_mwes(new_words, new_positions)
             self._delete_dangling_phrases(new_positions)
             for phrase in self.phrases(with_mwe=True):
                 self._fix_sent_pos_in_phrase(phrase, new_positions)
         self._words = new_words
-
-    def _delete_dangling_mwes(self, new_words, new_positions):
-        for word_obj in new_words:
-            new_mwes = []
-            for mwe_phrase in word_obj.mwes:
-                if all(new_positions[p] != -1 for p in mwe_phrase.get_sent_pos_list()):
-                    new_mwes.append(mwe_phrase)
-            word_obj.mwes = new_mwes
 
     def _delete_dangling_phrases(self, new_positions):
         new_phrases = []
@@ -112,12 +102,10 @@ class Sent:
         yield from self._words
 
     @overload
-    def __getitem__(self, item: slice) -> List[WordObj]:
-        ...
+    def __getitem__(self, item: slice) -> List[WordObj]: ...
 
     @overload
-    def __getitem__(self, item: int) -> WordObj:
-        ...
+    def __getitem__(self, item: int) -> WordObj: ...
 
     def __getitem__(self, item: slice | int) -> List[WordObj] | WordObj:
         return self._words[item]
@@ -271,12 +259,10 @@ class Doc:
         yield from self._sents
 
     @overload
-    def __getitem__(self, item: slice) -> List[Sent]:
-        ...
+    def __getitem__(self, item: slice) -> List[Sent]: ...
 
     @overload
-    def __getitem__(self, item: int) -> Sent:
-        ...
+    def __getitem__(self, item: int) -> Sent: ...
 
     def __getitem__(self, item: slice | int) -> List[Sent] | Sent:
         return self._sents[item]

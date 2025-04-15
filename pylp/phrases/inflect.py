@@ -116,7 +116,7 @@ class BaseInflector(Inflector):
         self._inflected = []
 
     def _init(self, phrase: Phrase, sent: lp_doc.Sent):
-        self._inflected = [False] * phrase.size_with_preps()
+        self._inflected = [False] * phrase.size()
 
     def inflect_phrase(self, phrase: Phrase, sent: lp_doc.Sent):
         try:
@@ -177,7 +177,7 @@ class RuInflector(BaseInflector):
 
     def _init(self, phrase: Phrase, sent: lp_doc.Sent):
         super()._init(phrase, sent)
-        self._cases = [WordCase.NOM] * phrase.size_with_preps()
+        self._cases = [WordCase.NOM] * phrase.size()
 
     def inflect_head(self, phrase: Phrase, sent: lp_doc.Sent, head_pos):
         # We can only change number of a word

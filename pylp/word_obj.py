@@ -33,7 +33,6 @@ class WordObj:
         'num_type',
         'animacy',
         'extra',
-        'mwes',
     )
 
     def __init__(
@@ -86,12 +85,8 @@ class WordObj:
         self.num_type: Optional[common.WordNumType] = None
         self.animacy: Optional[common.WordAnimacy] = None
 
+        # Aux fields. These fields are used by some internal algorithms (phrase builder).
         self.extra: dict = {}
-
-        # Word can be associated with one or more MWEs.
-        # This word is a head in MWE phrases
-        # Multipe mwe possible when a word has multiple conjuct modifiers.
-        self.mwes: list[Any] = []
 
     @property
     def word_id(self) -> Optional[int]:

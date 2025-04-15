@@ -128,6 +128,11 @@ class ReprEnhancer:
         )
 
 
+class PhraseType(IntEnum):
+    DEFAULT = 0
+    MWE = 1
+
+
 class Phrase:
     def __init__(
         self,
@@ -143,11 +148,14 @@ class Phrase:
         self._size = size
         self._head_pos = head_pos
         self._sent_pos_list = sent_pos_list if sent_pos_list is not None else []
+        if self._size == 0:
+            self._size = len(self._sent_pos_list)
         self._words = words if words is not None else []
         self._deps = deps if deps is not None else []
         self._id_holder = id_holder if id_holder is not None else PhraseId()
         self._head_modifier = head_modifier if head_modifier is not None else HeadModifier()
         self._repr_modifiers = repr_modifiers if repr_modifiers is not None else []
+        self.phrase_type = PhraseType.DEFAULT
 
     @classmethod
     def from_word(cls: type["Phrase"], pos: int, word_obj: WordObj):
@@ -170,22 +178,22 @@ class Phrase:
     def size(self):
         return self._size
 
-    def size_with_preps(self):
-        return len(self._words)
-
-    def get_head_modifier(self):
+    def get_head_modifier(self) -> None | HeadModifier:
         return self._head_modifier
 
     def get_head_pos(self):
+        """Relative position of the head in the phrase."""
         return self._head_pos
 
     def sent_hp(self):
+        """Position of the head in the sentence."""
         return self._sent_pos_list[self._head_pos]
 
     def set_sent_pos_list(self, sent_pos_list):
         self._sent_pos_list = sent_pos_list
 
     def get_sent_pos_list(self):
+        """Positions of phrase parts in the sentence."""
         return self._sent_pos_list
 
     def get_words(self):
@@ -212,6 +220,7 @@ class Phrase:
         return ' '.join(words)
 
     def get_deps(self):
+        """Relative offsets from a word to its head word. The word with 0 value is the root."""
         return self._deps
 
     def get_repr_modifiers(self):
@@ -274,6 +283,9 @@ class Phrase:
                     for mod_list in self._repr_modifiers
                 ]
                 d['r' if use_shorthand_keys else 'repr_modifiers'] = repr_modifiers
+
+        if self.phrase_type != PhraseType.DEFAULT:
+            d['t' if use_shorthand_keys else 'type'] = self.phrase_type
         return d
 
     @classmethod
@@ -294,6 +306,8 @@ class Phrase:
         if not phrase._repr_modifiers:
             phrase._repr_modifiers = [None] * len(phrase._sent_pos_list)
         phrase._id_holder = PhraseId.from_dict(dic['i' if use_shorthand_keys else 'id_holder'])
+        phrase.phrase_type = dic.get('t' if use_shorthand_keys else 'type', PhraseType.DEFAULT)
+
         phrase._size = len(phrase._sent_pos_list)
         return phrase
 

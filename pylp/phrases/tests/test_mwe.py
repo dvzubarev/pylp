@@ -4,6 +4,8 @@ import pytest
 
 from pylp import lp_doc
 
+from pylp.phrases.builder import MWEBuilderOpts
+from pylp.phrases.phrase import PhraseType
 from pylp.phrases.util import add_phrases_to_doc
 import pylp.common as lp
 from pylp.word_obj import WordObj
@@ -35,25 +37,16 @@ def test_add_mwes_to_doc_1():
     doc_obj = _create_doc_obj_1()
     add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
-    words0 = list(doc_obj.sents())[0]
-    assert not words0[0].mwes
-    assert words0[1].mwes
-    assert not words0[2].mwes
-    assert not words0[3].mwes
-    assert not words0[4].mwes
-    assert not words0[5].mwes
-    assert not words0[6].mwes
-    assert words0[7].mwes
-    mwe_phrase1 = words0[1].mwes[0]
-    assert mwe_phrase1.get_str_repr() == 'Ivanov I. V.'
-    mwe_phrase2 = words0[7].mwes[0]
-    assert mwe_phrase2.get_str_repr() == 'spam filter'
-
     sent0 = doc_obj[0]
-    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases = [(p.get_str_repr(), p.phrase_type) for p in sent0.phrases()]
     str_phrases.sort()
     assert len(str_phrases) == 4
-    assert str_phrases == ['Ivanov I. V.', 'cool spam filter', 'r Ivanov I. V.', 'spam filter']
+    assert str_phrases == [
+        ('Ivanov I. V.', PhraseType.MWE),
+        ('cool spam filter', PhraseType.MWE),
+        ('r Ivanov I. V.', PhraseType.DEFAULT),
+        ('spam filter', PhraseType.MWE),
+    ]
 
 
 def test_add_mwes_to_doc_2():
@@ -104,7 +97,7 @@ def test_add_mwes_to_doc_4():
     add_phrases_to_doc(doc_obj, 4, min_cnt=0)
 
     sent0 = doc_obj[0]
-    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases = [p.get_str_repr() for p in sent0.phrases(with_mwe=True)]
     str_phrases.sort()
     assert len(str_phrases) == 4
     assert str_phrases == [
@@ -113,6 +106,8 @@ def test_add_mwes_to_doc_4():
         'spam filter of web server',
         'web server',
     ]
+
+    assert len(list(sent0.phrases(with_mwe=False))) == 0
 
 
 def test_add_mwes_to_doc_5():
@@ -164,7 +159,8 @@ def test_large_mwe_1():
     ]
     doc_obj = lp_doc.Doc('id', sents=[lp_doc.Sent(words)])
 
-    add_phrases_to_doc(doc_obj, 10, min_cnt=0)
+    # note different max size for phrases and MWEs
+    add_phrases_to_doc(doc_obj, 3, min_cnt=0, mwe_opts=MWEBuilderOpts(10))
 
     sent0 = doc_obj[0]
     str_phrases = [p.get_str_repr() for p in sent0.phrases()]

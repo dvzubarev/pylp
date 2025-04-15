@@ -4,13 +4,15 @@
 import math
 import logging
 import copy
-from typing import Iterator, List, Optional, FrozenSet, Any
+from typing import Iterator, List, Optional, FrozenSet, Any, cast
 
 import pylp.common as lp
 from pylp import lp_doc
 from pylp.word_obj import WordObj
 
-from pylp.phrases.phrase import Phrase, ReprEnhancer, ReprEnhType
+from pylp.phrases.phrase import Phrase, PhraseType, ReprEnhancer, ReprEnhType
+
+# * Builder helpers
 
 
 def _sorted_lists_intersect(li1, li2):
@@ -62,7 +64,8 @@ def _create_phrase_sent_pos_list(head_phrase: Phrase, other_phrase: Phrase):
 def _is_new_phrase_valid(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent):
     other_head_modifier = other_phrase.get_head_modifier()
     if (
-        other_head_modifier.prep_modifier is not None
+        other_head_modifier is not None
+        and other_head_modifier.prep_modifier is not None
         and other_head_modifier.prep_modifier[0] > other_phrase.get_sent_pos_list()[0]
     ):
         logging.debug(
@@ -88,12 +91,12 @@ def _create_repr_modifiers(other_phrase: Phrase, sent: lp_doc.Sent):
             other_repr_modifiers[head_pos] = enh_list
         enh_list.append(repr_enh)
 
-    if other_head_modifier.prep_modifier is not None:
+    if other_head_modifier is not None and other_head_modifier.prep_modifier is not None:
         prep_str = other_head_modifier.prep_modifier[1]
         repr_enh = ReprEnhancer(-head_pos, ReprEnhType.ADD_WORD, prep_str)
         _add_repr_mod(repr_enh)
 
-    if other_head_modifier.repr_mod_suffix is not None:
+    if other_head_modifier is not None and other_head_modifier.repr_mod_suffix is not None:
         repr_enh = ReprEnhancer(0, ReprEnhType.ADD_SUFFIX, other_head_modifier.repr_mod_suffix)
         _add_repr_mod(repr_enh)
 
@@ -158,6 +161,8 @@ def make_new_phrase(head_phrase: Phrase, other_phrase: Phrase, sent: lp_doc.Sent
         head_modifier=head_phrase.get_head_modifier(),
         repr_modifiers=repr_modifiers,
     )
+    # Simply derive type from the head phrase for now
+    new_phrase.phrase_type = head_phrase.phrase_type
 
     return new_phrase
 
@@ -199,17 +204,24 @@ class BasicPhraseBuilderOpts:
         self,
         max_variants_bound: int | None = None,
         return_top_level_phrases=False,
+        def_phrase_type: PhraseType = PhraseType.DEFAULT,
     ):
         self.max_variants_bound = max_variants_bound
         self.return_top_level_phrases = return_top_level_phrases
+        self.def_phrase_type = def_phrase_type
 
 
 class BasicPhraseBuilder:
-    def __init__(self, MaxN, opts: BasicPhraseBuilderOpts = BasicPhraseBuilderOpts()) -> None:
+    def __init__(
+        self,
+        MaxN,
+        opts: BasicPhraseBuilderOpts = BasicPhraseBuilderOpts(),
+    ) -> None:
         if MaxN <= 0:
             raise RuntimeError(f"Invalid MaxNumber of words {MaxN}")
         self._max_n = MaxN
         self._opts = opts
+        self._init_phrases: list[list[Phrase]] = []
 
     def _create_all_mods_index(self, sent: lp_doc.Sent) -> ModsIndexType:
         mods_index: ModsIndexType = [None] * len(sent)
@@ -231,14 +243,13 @@ class BasicPhraseBuilder:
         try:
             cur_word_index = [[] for _ in range(self._max_n)]
             words_index[pos] = cur_word_index
-            if word_obj.mwes:
-                mwe_phrase: Phrase
-                for mwe_phrase in word_obj.mwes:
-                    if mwe_phrase.size() > self._max_n:
-                        return
-                    cur_word_index[mwe_phrase.size() - 1].append(mwe_phrase)
+            if self._init_phrases and (word_init_phrases := self._init_phrases[pos]):
+                # Fill index for this word from init phrases.
+                for phrase in word_init_phrases:
+                    cur_word_index[min(phrase.size() - 1, self._max_n - 1)].append(phrase)
             else:
                 phrase = Phrase.from_word(pos, word_obj)
+                phrase.phrase_type = self._opts.def_phrase_type
                 # init words_index's level 0
                 cur_word_index[0] = [phrase]
         except RuntimeError as ex:
@@ -320,9 +331,12 @@ class BasicPhraseBuilder:
                 continue
 
             if (
-                conj_head_mod := conj_mod_phrase.get_head_modifier()
-            ) and conj_head_mod.prep_modifier is None:
-                conj_head_mod.prep_modifier = main_mod_phrase.get_head_modifier().prep_modifier
+                (conj_head_mod := conj_mod_phrase.get_head_modifier())
+                and conj_head_mod.prep_modifier is None
+                and (mod_head_mod := main_mod_phrase.get_head_modifier()) is not None
+            ):
+
+                conj_head_mod.prep_modifier = mod_head_mod.prep_modifier
 
     def _create_indices(
         self, sent: lp_doc.Sent, all_mods_index: ModsIndexType
@@ -392,8 +406,8 @@ class BasicPhraseBuilder:
             if mod_phrases is None:
                 continue
 
-            for mod_phrase in mod_phrases[level]:
-                yield mod_phrase
+            yield from mod_phrases[level]
+
 
     def _generate_phrases_for_level(self, level, head_pos, aux_indices, sent, phrases_cache):
         mods_index = aux_indices.mods_index[head_pos]
@@ -423,6 +437,7 @@ class BasicPhraseBuilder:
 
                 for p in gen:
                     head_index[level + 1].append(p)
+                    # Keep only up to max_variants_bound phrases
                     if (
                         self._opts.max_variants_bound is not None
                         and len(head_index[level + 1]) >= self._opts.max_variants_bound
@@ -458,6 +473,7 @@ class BasicPhraseBuilder:
 
         self._generate_phrases(sent, aux_indices)
 
+        # Collect all generated phrases.
         all_phrases = []
         for head_phrases in aux_indices.words_index:
             if head_phrases is None:
@@ -471,8 +487,12 @@ class BasicPhraseBuilder:
             for l in range(start_level, self._max_n):
                 for p in head_phrases[l]:
                     pos = p.sent_hp()
+                    # Test created phrases. Some phrases suplied via
+                    # init_phrases (e.g. MWEs) can be on levels > 0, and they
+                    # might have heads not compatible with current builder
+                    # settings. We have to remove them from the final phrases list.
+                    # See test_add_mwes_to_doc_4
                     if self._test_head(sent[pos], pos, sent, all_mods_index):
-                        # Some mwe can be on levels > 0, we have to filter them
                         all_phrases.append(p)
 
         return all_phrases
@@ -500,11 +520,24 @@ class BasicPhraseBuilder:
     def _test_head(self, word_obj: WordObj, pos: int, sent: lp_doc.Sent, mods_index: ModsIndexType):
         raise NotImplementedError("_test_head")
 
-    def build_phrases_for_sent(self, sent: lp_doc.Sent) -> List[Phrase]:
+    def build_phrases_for_sent(
+        self, sent: lp_doc.Sent, init_phrases: list[Phrase] | None = None
+    ) -> List[Phrase]:
         if len(sent) > 4096:
             raise RuntimeError("Sent size limit!")
+
+        if init_phrases:
+            self._init_phrases = [[] for _ in range(len(sent))]
+            for p in init_phrases:
+                self._init_phrases[p.sent_hp()].append(p)
+
+        else:
+            self._init_phrases = []
+
         return self._build_phrases_impl(sent)
 
+
+# * Opts and Constants
 
 # Multi word expressions
 MWE_RELS = frozenset(
@@ -531,6 +564,7 @@ COMMON_BANNED_MODIFIERS = [
     ('example', lp.PosTag.NOUN, 'for'),
 ]
 
+
 # https://universaldependencies.org/v2/mwe.html
 class MWEBuilderOpts(BasicPhraseBuilderOpts):
     def __init__(
@@ -544,7 +578,9 @@ class MWEBuilderOpts(BasicPhraseBuilderOpts):
         bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
         banned_modifiers: FrozenSet[tuple[str | None, str]] | None = None,
     ):
-        super().__init__(max_variants_bound=3, return_top_level_phrases=True)
+        super().__init__(
+            max_variants_bound=3, return_top_level_phrases=True, def_phrase_type=PhraseType.MWE
+        )
 
         self.mwe_size = mwe_size
 
@@ -647,13 +683,19 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
             self.banned_modifiers = banned_modifiers
 
 
+# * Builder class
+
+
 class PhraseBuilder(BasicPhraseBuilder):
     def __init__(self, MaxN, opts: BasicPhraseBuilderOpts = PhraseBuilderOpts()) -> None:
         super().__init__(MaxN, opts=opts)
         self._opts = opts
 
+        # set by methods
+        self._init_phrases = []
+
     def opts(self) -> PhraseBuilderOpts:
-        return self._opts
+        return cast(PhraseBuilderOpts, self._opts)
 
     def _restore_prep_str(self, prep_pos: int, prep_obj: WordObj, sent: lp_doc.Sent):
         beg = max(0, prep_pos - 2)
@@ -763,9 +805,11 @@ class PhraseBuilder(BasicPhraseBuilder):
         key = (
             word_obj.lemma,
             word_obj.pos_tag,
-            None
-            if (prep_mod := word_obj.extra.get(lp.Attr.PREP_WHITE_LIST)) is None
-            else prep_mod[1],
+            (
+                None
+                if (prep_mod := word_obj.extra.get(lp.Attr.PREP_WHITE_LIST)) is None
+                else prep_mod[1]
+            ),
         )
         if key in self.opts().banned_modifiers:
             return False
