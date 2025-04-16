@@ -11,6 +11,7 @@ from pylp.phrases.builder import (
     BasicPhraseBuilder,
     PhraseBuilder,
     PhraseBuilderOpts,
+    PhraseBuilderProfileArgs,
     dispatch_phrase_building,
 )
 from pylp.phrases.phrase import Phrase
@@ -39,8 +40,9 @@ def add_phrases_to_doc(
     phrases_max_n: int,
     min_cnt: int = 0,
     profile_name: str = '',
-    builder_cls=PhraseBuilder,
+    profile_args: PhraseBuilderProfileArgs = PhraseBuilderProfileArgs(),
     builder_opts=None,
+    builder_cls=PhraseBuilder,
 ):
     """Pass either profile_name or builder_opts. If profile_name is not empty
     call dispatch_phrase_building with specified profile_name. Otherwise call
@@ -55,7 +57,11 @@ def add_phrases_to_doc(
     if profile_name:
         for sent in doc_obj:
             phrases = dispatch_phrase_building(
-                profile_name, sent, phrases_max_n, builder_cls=builder_cls
+                profile_name,
+                sent,
+                phrases_max_n,
+                profile_args=profile_args,
+                builder_cls=builder_cls,
             )
             sent.set_phrases(phrases)
     else:

@@ -898,8 +898,15 @@ def keep_non_overlapping_phrases(phrases: Iterable[Phrase]) -> list[Phrase]:
     return new_phrases
 
 
-def _noun_phrases(sent: lp_doc.Sent, max_n, mwe_max_n=0, builder_cls=PhraseBuilder) -> list[Phrase]:
-    mwe_opts = MWEBuilderOpts(mwe_max_n)
+class PhraseBuilderProfileArgs:
+    def __init__(self, mwe_max_n=0):
+        self.mwe_max_n = mwe_max_n
+
+
+def _noun_phrases(
+    sent: lp_doc.Sent, max_n: int, profile_args: PhraseBuilderProfileArgs, builder_cls=PhraseBuilder
+) -> list[Phrase]:
+    mwe_opts = MWEBuilderOpts(profile_args.mwe_max_n)
     if not mwe_opts.mwe_size:
         mwe_size = max(6, max_n)
     else:
@@ -921,12 +928,16 @@ def _noun_phrases(sent: lp_doc.Sent, max_n, mwe_max_n=0, builder_cls=PhraseBuild
 
 
 def dispatch_phrase_building(
-    profile_name: str, sent: lp_doc.Sent, max_n, mwe_max_n=0, builder_cls=PhraseBuilder
+    profile_name: str,
+    sent: lp_doc.Sent,
+    max_n: int,
+    profile_args: PhraseBuilderProfileArgs = PhraseBuilderProfileArgs(),
+    builder_cls=PhraseBuilder,
 ) -> list[Phrase]:
     if profile_name == 'noun_phrases':
-        return _noun_phrases(sent, max_n, mwe_max_n, builder_cls)
+        return _noun_phrases(sent, max_n, profile_args, builder_cls)
     if profile_name == 'verb+noun_phrases':
-        init_phrases = _noun_phrases(sent, max_n, mwe_max_n, builder_cls)
+        init_phrases = _noun_phrases(sent, max_n, profile_args, builder_cls)
         builder_opts = PhraseBuilderOpts()
         builder_opts.good_mod_PoS = frozenset([lp.PosTag.NOUN, lp.PosTag.PROPN])
         builder_opts.good_head_PoS = frozenset([lp.PosTag.VERB])

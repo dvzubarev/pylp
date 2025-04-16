@@ -4,7 +4,7 @@ import pytest
 
 from pylp import lp_doc
 
-from pylp.phrases.builder import dispatch_phrase_building
+from pylp.phrases.builder import PhraseBuilderProfileArgs, dispatch_phrase_building
 from pylp.phrases.phrase import PhraseType
 import pylp.common as lp
 from pylp.word_obj import WordObj
@@ -145,7 +145,9 @@ def test_large_mwe_1():
     ]
     sent = lp_doc.Sent(words)
     # note different max size for phrases and MWEs
-    phrases = dispatch_phrase_building('noun_phrases', sent, 3, mwe_max_n=10)
+    phrases = dispatch_phrase_building(
+        'noun_phrases', sent, 3, PhraseBuilderProfileArgs(mwe_max_n=10)
+    )
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
     assert len(str_phrases) == 6
