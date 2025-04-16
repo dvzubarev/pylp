@@ -60,7 +60,7 @@ def _p2str(phrase):
 
 def test_add_phrases_to_doc():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, min_cnt=0)
+    add_phrases_to_doc(doc_obj, 4, min_cnt=0, profile_name='noun_phrases')
 
     sent0 = doc_obj[0]
     str_phrases = [(p.get_str_repr(), p.size()) for p in sent0.phrases()]
@@ -83,7 +83,7 @@ def test_add_phrases_to_doc():
 
 def test_add_phrases_to_doc_with_min_cnt():
     doc_obj = _create_doc_obj()
-    add_phrases_to_doc(doc_obj, 4, min_cnt=2)
+    add_phrases_to_doc(doc_obj, 4, min_cnt=2, profile_name='noun_phrases')
 
     sent0 = doc_obj[0]
     str_phrases = [_p2str(p) for p in sent0.phrases()]
@@ -154,7 +154,7 @@ def _create_doc_obj_with_mwes():
 
 def test_add_phrases_to_doc_with_mwes():
     doc_obj = _create_doc_obj_with_mwes()
-    add_phrases_to_doc(doc_obj, 4, min_cnt=0)
+    add_phrases_to_doc(doc_obj, 4, min_cnt=0, profile_name='noun_phrases')
 
     sent0 = doc_obj[0]
     str_phrases = [(p.get_str_repr(), p.size(), p.phrase_type) for p in sent0.phrases()]
