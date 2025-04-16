@@ -53,6 +53,7 @@ class WordObj:
         case: common.WordCase | None = None,
         voice: common.WordVoice | None = None,
         degree: common.WordDegree | None = None,
+        animacy: common.WordAnimacy | None = None,
     ) -> None:
         # basic info
         self.pos_tag: common.PosTag = pos_tag
@@ -83,7 +84,7 @@ class WordObj:
         self.voice: Optional[common.WordVoice] = voice
         self.mood: Optional[common.WordMood] = None
         self.num_type: Optional[common.WordNumType] = None
-        self.animacy: Optional[common.WordAnimacy] = None
+        self.animacy: Optional[common.WordAnimacy] = animacy
 
         # Aux fields. These fields are used by some internal algorithms (phrase builder).
         self.extra: dict = {}

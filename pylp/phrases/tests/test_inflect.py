@@ -6,6 +6,7 @@ from pylp.phrases.inflect import inflect_ru_phrase, inflect_phrase
 from pylp.phrases.phrase import Phrase
 from pylp.common import (
     PosTag,
+    WordAnimacy,
     WordGender,
     WordTense,
     WordVoice,
@@ -27,7 +28,12 @@ def test_simple_adj_inflect():
     sent = lp_doc.Sent(
         [
             WordObj(pos_tag=PosTag.ADJ),
-            WordObj(pos_tag=PosTag.NOUN, gender=WordGender.FEM),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                gender=WordGender.FEM,
+                case=WordCase.ACC,
+                animacy=WordAnimacy.INAN,
+            ),
         ]
     )
 
@@ -488,6 +494,144 @@ def test_ru_propn_inflect5():
 
     inflect_phrase(p, sent, Lang.RU)
     assert p.get_words() == ['шляпа', 'Ивана', 'Иванова']
+
+
+# ** Ru verb phrases inflect tests
+
+
+def test_ru_vp_inflect1():
+    # проголосуйте на выборах президента
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2, 3],
+        words=['проголосовать', 'на', 'выборы', 'президент'],
+        deps=[0, 1, -2, -1],
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.VERB),
+            WordObj(pos_tag=PosTag.ADP),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.OBL,
+                number=WordNumber.PLUR,
+                case=WordCase.LOC,
+            ),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.NMOD,
+                case=WordCase.ACC,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['проголосовать', 'на', 'выборах', 'президента']
+
+
+def test_ru_vp_inflect2():
+    # Я протер вымытую посуду
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['протереть', 'вымытый', 'посуда'],
+        deps=[0, 1, -2],
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.VERB),
+            WordObj(pos_tag=PosTag.PARTICIPLE, synt_link=SyntLink.AMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.OBJ,
+                case=WordCase.ACC,
+                gender=WordGender.FEM,
+                animacy=WordAnimacy.INAN,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['протереть', 'вымытую', 'посуду']
+
+
+def test_ru_vp_inflect3():
+    # провести быстрые эксперименты
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['провести', 'быстрый', 'эксперимент'],
+        deps=[0, 1, -2],
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.VERB),
+            WordObj(pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.OBJ,
+                case=WordCase.ACC,
+                number=WordNumber.PLUR,
+                animacy=WordAnimacy.INAN,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['провести', 'быстрые', 'эксперименты']
+
+
+def test_ru_vp_inflect4():
+    # пасти быстрых коз
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['пасти', 'быстрый', 'коза'],
+        deps=[0, 1, -2],
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.VERB),
+            WordObj(pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.OBJ,
+                gender=WordGender.FEM,
+                case=WordCase.ACC,
+                number=WordNumber.PLUR,
+                animacy=WordAnimacy.ANIM,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['пасти', 'быстрых', 'коз']
+
+
+def test_ru_vp_inflect5():
+    # добывать дешёвое сырьё
+    p = Phrase(
+        head_pos=0,
+        sent_pos_list=[0, 1, 2],
+        words=['добывать', 'дешёвый', 'сырьё'],
+        deps=[0, 1, -2],
+    )
+    sent = lp_doc.Sent(
+        [
+            WordObj(pos_tag=PosTag.VERB),
+            WordObj(pos_tag=PosTag.ADJ, synt_link=SyntLink.AMOD),
+            WordObj(
+                pos_tag=PosTag.NOUN,
+                synt_link=SyntLink.OBJ,
+                gender=WordGender.NEUT,
+                case=WordCase.ACC,
+                animacy=WordAnimacy.INAN,
+            ),
+        ]
+    )
+
+    inflect_phrase(p, sent, Lang.RU)
+    assert p.get_words() == ['добывать', 'дешёвое', 'сырьё']
 
 
 # * En inflect tests

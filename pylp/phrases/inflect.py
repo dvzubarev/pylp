@@ -12,6 +12,7 @@ import pymorphy2
 from pylp.common import (
     Lang,
     PosTag,
+    WordAnimacy,
     WordGender,
     WordNumber,
     WordVoice,
@@ -234,7 +235,7 @@ class RuInflector(BaseInflector):
             mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
             link = self._resolve_conj_link(mod_sent_pos, mod_obj, sent)
 
-        if link == SyntLink.NMOD or link in MWE_RELS:
+        if link in (SyntLink.NMOD, SyntLink.OBL, SyntLink.OBJ) or link in MWE_RELS:
             form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
             if case is not None:
                 self._cases[mod_pos] = case
@@ -255,7 +256,7 @@ class RuInflector(BaseInflector):
         mod_obj = sent[mod_sent_pos]
 
         phrase_words = phrase.get_words()
-        if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
+        if head_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN, PosTag.VERB):
 
             if mod_obj.pos_tag in (PosTag.NOUN, PosTag.PROPN):
                 self._inflect_noun_noun(
@@ -275,6 +276,14 @@ class RuInflector(BaseInflector):
                         feats['gender'] = gender
 
                 feats['case'] = self._case_mapping[self._cases[head_pos]]
+                # inflection of adjectives depends on animacy of the head word for Accusative case
+                # See https://gramota.ru/meta/bystryy
+                if (
+                    feats['case'] == 'accs'
+                    and (head_obj.number == WordNumber.PLUR or head_obj.gender == WordGender.MASC)
+                    and head_obj.animacy == WordAnimacy.INAN
+                ):
+                    feats['animacy'] = 'inan'
 
                 if mod_obj.pos_tag == PosTag.ADJ:
                     form = self._pymorphy_inflect(phrase_words[mod_pos], 'ADJF', feats)
