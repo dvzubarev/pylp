@@ -5,6 +5,8 @@ import math
 import logging
 import copy
 from typing import Iterator, List, Optional, FrozenSet, Any, cast
+import collections
+from collections.abc import Iterable
 
 import pylp.common as lp
 from pylp import lp_doc
@@ -547,6 +549,8 @@ MWE_RELS = frozenset(
         lp.SyntLink.FLAT,
     ]
 )
+VP_RELS = frozenset([lp.SyntLink.OBJ, lp.SyntLink.OBL, lp.SyntLink.IOBJ])
+
 COMMON_BANNED_MODIFIERS = [
     ('число', lp.PosTag.NOUN, 'в'),  # в том числе
     ('целое', lp.PosTag.NOUN, 'в'),  # в целом
@@ -830,3 +834,72 @@ class PhraseBuilder(BasicPhraseBuilder):
             and word_obj.pos_tag in self.opts().good_head_PoS
             and word_obj.synt_link not in self.opts().bad_head_rels
         )
+
+
+# * Dispatchers and common builders
+
+
+def keep_non_overlapping_phrases(phrases: Iterable[Phrase]) -> list[Phrase]:
+    """Exclude phrases that are completely overlapped by other phrases. For
+    example, if input phrases are [(1, 2), (1,2,3,4), (4,5)] (phrases are
+    represented by their positions in the sentence). This function returns
+    [(1,2,3,4), (4,5)]. Returned phrases are sorted by the size.
+    """
+
+    sorted_phrases = sorted(phrases, key=lambda p: -p.size())
+    if not sorted_phrases:
+        return []
+
+    seen_phrases: dict[int, list[Phrase]] = collections.defaultdict(list)
+    new_phrases = []
+    for p in sorted_phrases:
+        for pos in p.get_sent_pos_list():
+            if (head_phrases := seen_phrases[pos]) and any(hp.contains(p) for hp in head_phrases):
+                # phrase is completely overlapped by already added phrase
+                break
+        else:
+            new_phrases.append(p)
+            for pos in p.get_sent_pos_list():
+                seen_phrases[pos].append(p)
+
+    return new_phrases
+
+
+def _noun_phrases(sent: lp_doc.Sent, max_n, mwe_max_n=0, builder_cls=PhraseBuilder) -> list[Phrase]:
+    mwe_opts = MWEBuilderOpts(mwe_max_n)
+    if not mwe_opts.mwe_size:
+        mwe_size = max(6, max_n)
+    else:
+        mwe_size = mwe_opts.mwe_size
+    mwe_builder: BasicPhraseBuilder = builder_cls(mwe_size, mwe_opts)
+
+    builder_opts = PhraseBuilderOpts()
+    builder: BasicPhraseBuilder = builder_cls(max_n, builder_opts)
+
+    # MWEs are extracted using more efficient greedy algorithm.
+    mwes = mwe_builder.build_phrases_for_sent(sent)
+    # MWEs could be used to produce other phrases.
+    # For example, mod1 + (MWE_head, MWE_mod1, ...)
+    # So use them as init phrases, so builder could use them.
+    mwes = keep_non_overlapping_phrases(mwes)
+
+    phrases = builder.build_phrases_for_sent(sent, init_phrases=mwes)
+    return phrases
+
+
+def dispatch_phrase_building(
+    profile_name: str, sent: lp_doc.Sent, max_n, mwe_max_n=0, builder_cls=PhraseBuilder
+) -> list[Phrase]:
+    if profile_name == 'noun_phrases':
+        return _noun_phrases(sent, max_n, mwe_max_n, builder_cls)
+    if profile_name == 'verb+noun_phrases':
+        init_phrases = _noun_phrases(sent, max_n, mwe_max_n, builder_cls)
+        builder_opts = PhraseBuilderOpts()
+        builder_opts.good_mod_PoS = frozenset([lp.PosTag.NOUN, lp.PosTag.PROPN])
+        builder_opts.good_head_PoS = frozenset([lp.PosTag.VERB])
+        builder_opts.good_synt_rels = VP_RELS
+        builder: BasicPhraseBuilder = builder_cls(max_n, builder_opts)
+        vp = builder.build_phrases_for_sent(sent, init_phrases=init_phrases)
+        return vp + init_phrases
+
+    raise RuntimeError(f'Unknown profile name: {profile_name}')

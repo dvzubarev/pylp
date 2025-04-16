@@ -11,37 +11,11 @@ from pylp.phrases.builder import (
     BasicPhraseBuilder,
     PhraseBuilder,
     PhraseBuilderOpts,
-    MWEBuilderOpts,
+    dispatch_phrase_building,
 )
 from pylp.phrases.phrase import Phrase
 
 from pylp import lp_doc
-
-
-def keep_non_overlapping_phrases(phrases: Iterable[Phrase]) -> list[Phrase]:
-    """Exclude phrases that are completely overlapped by other phrases. For
-    example, if input phrases are [(1, 2), (1,2,3,4), (4,5)] (phrases are
-    represented by their positions in the sentence). This function returns
-    [(1,2,3,4), (4,5)]. Returned phrases are sorted by the size.
-    """
-
-    sorted_phrases = sorted(phrases, key=lambda p: -p.size())
-    if not sorted_phrases:
-        return []
-
-    seen_phrases: dict[int, list[Phrase]] = collections.defaultdict(list)
-    new_phrases = []
-    for p in sorted_phrases:
-        for pos in p.get_sent_pos_list():
-            if (head_phrases := seen_phrases[pos]) and any(hp.contains(p) for hp in head_phrases):
-                # phrase is completely overlapped by already added phrase
-                break
-        else:
-            new_phrases.append(p)
-            for pos in p.get_sent_pos_list():
-                seen_phrases[pos].append(p)
-
-    return new_phrases
 
 
 def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
@@ -62,35 +36,34 @@ def remove_rare_phrases(doc_obj: lp_doc.Doc, min_cnt=1):
 
 def add_phrases_to_doc(
     doc_obj: lp_doc.Doc,
-    MaxN,
-    min_cnt=0,
+    phrases_max_n: int,
+    min_cnt: int = 0,
+    profile_name: str = '',
     builder_cls=PhraseBuilder,
     builder_opts=None,
-    mwe_opts=None,
 ):
+    """Pass either profile_name or builder_opts. If profile_name is not empty
+    call dispatch_phrase_building with specified profile_name. Otherwise call
+    builder_cls(phrases_max_n, builder_opts).build_phrases_for_sent for each
+    sentence in the doc.
+    """
+    if not profile_name and builder_opts is None:
+        raise RuntimeError("Pass either profile_name or builder_opts!")
+    if profile_name and builder_opts:
+        raise RuntimeError("Pass either profile_name or builder_opts!")
 
-    if mwe_opts is None:
-        mwe_opts = MWEBuilderOpts()
-    if not mwe_opts.mwe_size:
-        mwe_size = MaxN
+    if profile_name:
+        for sent in doc_obj:
+            phrases = dispatch_phrase_building(
+                profile_name, sent, phrases_max_n, builder_cls=builder_cls
+            )
+            sent.set_phrases(phrases)
     else:
-        mwe_size = mwe_opts.mwe_size
-    mwe_builder: BasicPhraseBuilder = builder_cls(mwe_size, mwe_opts)
-
-    if builder_opts is None:
         builder_opts = PhraseBuilderOpts()
-    builder: BasicPhraseBuilder = builder_cls(MaxN, builder_opts)
-
-    for sent in doc_obj:
-        # MWEs are extracted using more efficient greedy algorithm.
-        mwes = mwe_builder.build_phrases_for_sent(sent)
-        # MWEs could be used to produce other phrases.
-        # For example, mod1 + (MWE_head, MWE_mod1, ...)
-        # So use them as init phrases, so builder could use them.
-        mwes = keep_non_overlapping_phrases(mwes)
-
-        phrases = builder.build_phrases_for_sent(sent, init_phrases=mwes)
-        sent.set_phrases(phrases)
+        builder: BasicPhraseBuilder = builder_cls(phrases_max_n, builder_opts)
+        for sent in doc_obj:
+            phrases = builder.build_phrases_for_sent(sent)
+            sent.set_phrases(phrases)
     if min_cnt:
         remove_rare_phrases(doc_obj, min_cnt=min_cnt)
 

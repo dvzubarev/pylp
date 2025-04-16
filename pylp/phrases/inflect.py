@@ -22,9 +22,11 @@ from pylp.common import (
 )
 from pylp import lp_doc
 from pylp.phrases.phrase import Phrase
-from pylp.phrases.builder import MWE_RELS
+from pylp.phrases.builder import MWE_RELS, VP_RELS
 from pylp.word_obj import WordObj
 
+
+INFLECT_TO_CASE_RELS = frozenset({SyntLink.NMOD} | VP_RELS | MWE_RELS)
 
 # * Abstract classes
 
@@ -235,7 +237,7 @@ class RuInflector(BaseInflector):
             mod_sent_pos = phrase.get_sent_pos_list()[mod_pos]
             link = self._resolve_conj_link(mod_sent_pos, mod_obj, sent)
 
-        if link in (SyntLink.NMOD, SyntLink.OBL, SyntLink.OBJ) or link in MWE_RELS:
+        if link in INFLECT_TO_CASE_RELS:
             form, case = self._inflect_to_case(phrase_words[mod_pos], mod_obj)
             if case is not None:
                 self._cases[mod_pos] = case
