@@ -207,10 +207,15 @@ class BasicPhraseBuilderOpts:
         max_variants_bound: int | None = None,
         return_top_level_phrases=False,
         def_phrase_type: PhraseType = PhraseType.DEFAULT,
+        propagate_mods_to_conjucts: bool = True,
     ):
         self.max_variants_bound = max_variants_bound
         self.return_top_level_phrases = return_top_level_phrases
         self.def_phrase_type = def_phrase_type
+        # See https://fginter.github.io/docs/u/dep/conj.html
+        # Propagate all modifiers of the first conjunct to the others.
+        # See _propagate_head_modifiers_to_conj for details.
+        self.propagate_mods_to_conjucts = propagate_mods_to_conjucts
 
 
 class BasicPhraseBuilder:
@@ -306,7 +311,7 @@ class BasicPhraseBuilder:
 
         return None, None
 
-    def _propagate_head_modifiers_to_conj(self, aux_indices: AuxBuilderIndices):
+    def _propagate_head_modifiers_to_conj(self, sent: lp_doc.Sent, aux_indices: AuxBuilderIndices):
         def _find_phrase(levels):
             # This word may be MWE, so need to scan all levels
             for phrases_on_level in levels:
@@ -322,6 +327,27 @@ class BasicPhraseBuilder:
             if aux_info is None or aux_info.main_mod_pos is None:
                 continue
 
+            # propagate modifiers of the main word to the word conjunct relation
+            if self._opts.propagate_mods_to_conjucts and (
+                main_word_mods := aux_indices.mods_index[aux_info.main_mod_pos]
+            ):
+                # See https://fginter.github.io/docs/u/dep/conj.html
+                # Since conjuct is a general relation between two elements connected by a conjunction,
+                # we use an heuristick to determine whether we should propagate modifiers.
+                # We propagate only if current conjuct has no its own modifiers.
+                # Also propagate only modificator that placed before main word:
+                # amod main, conj2, conj3
+                # or after the current conj
+                # root_verb, conj_verb obj
+                current_mods = aux_indices.mods_index[pos]
+                if current_mods is None:
+                    current_mods = []
+                    current_mods.extend(
+                        p for p in main_word_mods if (p < aux_info.main_mod_pos or p > pos)
+                    )
+                    aux_indices.mods_index[pos] = current_mods
+
+            # propagate cosmetic head modifiers of the main word if any
             if (conj_phrases := aux_indices.words_index[pos]) is None or (
                 conj_mod_phrase := _find_phrase(conj_phrases)
             ) is None:
@@ -378,7 +404,7 @@ class BasicPhraseBuilder:
                     mods_list.append(i)
 
         aux_indices = AuxBuilderIndices(words_index, good_mods_index, aux_info_list)
-        self._propagate_head_modifiers_to_conj(aux_indices)
+        self._propagate_head_modifiers_to_conj(sent, aux_indices)
         return aux_indices
 
     def _modifiers_generator(
@@ -638,8 +664,11 @@ class PhraseBuilderOpts(BasicPhraseBuilderOpts):
         good_head_PoS: FrozenSet[lp.PosTag] | None = None,
         bad_head_rels: FrozenSet[lp.SyntLink] | None = None,
         banned_modifiers: FrozenSet[tuple[str, lp.PosTag, str | None]] | None = None,
+        propagate_mods_to_conjucts: bool = True,
     ):
-        super().__init__(max_variants_bound=8)
+        super().__init__(
+            max_variants_bound=8, propagate_mods_to_conjucts=propagate_mods_to_conjucts
+        )
 
         self.max_syntax_dist = max_syntax_dist
         if good_mod_PoS is None:

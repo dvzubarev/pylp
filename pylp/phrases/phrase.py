@@ -153,6 +153,7 @@ class Phrase:
         self._words = words if words is not None else []
         self._deps = deps if deps is not None else []
         self._id_holder = id_holder if id_holder is not None else PhraseId()
+        # cosmetic modifiers
         self._head_modifier = head_modifier if head_modifier is not None else HeadModifier()
         self._repr_modifiers = repr_modifiers if repr_modifiers is not None else []
         self.phrase_type = PhraseType.DEFAULT
@@ -179,6 +180,8 @@ class Phrase:
         return self._size
 
     def get_head_modifier(self) -> None | HeadModifier:
+        """Get cosmetic head modifiers. This modifiers are used when producing
+        string for a phrase."""
         return self._head_modifier
 
     def get_head_pos(self):

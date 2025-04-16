@@ -8,6 +8,7 @@ from pylp.phrases.phrase import Phrase
 from pylp.phrases.builder import (
     BasicPhraseBuilder,
     PhraseBuilder,
+    dispatch_phrase_building,
     make_new_phrase,
 )
 
@@ -507,14 +508,16 @@ def test_phrases_propagate_conj_6():
     phrases = phrase_builder.build_phrases_for_sent(sent)
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert len(phrases) == 7
+    assert len(phrases) == 9
     assert str_phrases == [
         'm1 h2',
+        'm1 h3',
         'm2 h4',
         'r of h2',
         'r of h3',
         'r of h4',
         'r of m1 h2',
+        'r of m1 h3',
         'r of m2 h4',
     ]
 
@@ -627,6 +630,80 @@ def test_phrase_id_with_prepositions():
     assert len(phrases) == 1
     phrase_id2 = phrases[0].get_id()
     assert phrase_id != phrase_id2
+
+
+# * test dispatcher
+# ** Verb phrases
+
+
+def test_dispatcher_vp_1():
+    words = [
+        _mkw('v1', 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw('amod', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('n1', -2, lp.PosTag.NOUN, lp.SyntLink.OBJ),
+    ]
+    sent = lp_doc.Sent(words)
+    phrases = dispatch_phrase_building('verb+noun_phrases', sent, 4)
+    # TODO should be 3?
+    # v1 h2 missing
+    assert len(phrases) == 2
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    assert str_phrases == ['amod n1', 'v1 amod n1']
+
+
+def test_dispatcher_vp_2():
+    words = [
+        _mkw('subj', 1, lp.PosTag.NOUN, lp.SyntLink.NSUBJ),
+        _mkw('v1', 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw('on', 1, lp.PosTag.ADP, lp.SyntLink.CASE),
+        _mkw('n1', -2, lp.PosTag.NOUN, lp.SyntLink.OBL),
+    ]
+    sent = lp_doc.Sent(words)
+    phrases = dispatch_phrase_building('verb+noun_phrases', sent, 4)
+    assert len(phrases) == 1
+    assert phrases[0].get_str_repr() == 'v1 on n1'
+
+
+def test_dispatcher_vp_conj_1():
+    words = [
+        _mkw('v1', 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw('v2', -1, lp.PosTag.VERB, lp.SyntLink.CONJ),
+        _mkw('amod', 1, lp.PosTag.ADJ, lp.SyntLink.AMOD),
+        _mkw('n1', -3, lp.PosTag.NOUN, lp.SyntLink.OBJ),
+        _mkw('n2', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+    ]
+    sent = lp_doc.Sent(words)
+    phrases = dispatch_phrase_building('verb+noun_phrases', sent, 4)
+    str_phrases = [p.get_str_repr() for p in phrases]
+    str_phrases.sort()
+    print(str_phrases)
+    assert len(str_phrases) == 6
+    assert str_phrases == [
+        'amod n1',
+        'amod n2',
+        'v1 amod n1',
+        'v1 amod n2',
+        'v2 amod n1',
+        'v2 amod n2',
+    ]
+
+
+def test_dispatcher_vp_conj_2():
+    words = [
+        _mkw('n1', 1, lp.PosTag.NOUN, lp.SyntLink.NSUBJ),
+        _mkw('v1', 0, lp.PosTag.VERB, lp.SyntLink.ROOT),
+        _mkw('n1', -1, lp.PosTag.NOUN, lp.SyntLink.OBJ),
+        _mkw('adv1', 1, lp.PosTag.ADV, lp.SyntLink.ADVMOD),
+        _mkw('v2', -3, lp.PosTag.VERB, lp.SyntLink.CONJ),
+    ]
+    sent = lp_doc.Sent(words)
+    phrases = dispatch_phrase_building('verb+noun_phrases', sent, 4)
+    assert len(phrases) == 1
+    assert phrases[0].get_str_repr() == 'v1 n1'
+
+
+# * Misc tests
 
 
 def test_overlap():

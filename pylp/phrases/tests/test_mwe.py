@@ -4,7 +4,7 @@ import pytest
 
 from pylp import lp_doc
 
-from pylp.phrases.builder import MWEBuilderOpts
+from pylp.phrases.builder import MWEBuilderOpts, dispatch_phrase_building
 from pylp.phrases.phrase import PhraseType
 from pylp.phrases.util import add_phrases_to_doc
 import pylp.common as lp
@@ -226,14 +226,18 @@ def test_mwe_propagate_prep_modifier_2():
         _mkw('of', 2, lp.PosTag.ADP, lp.SyntLink.CASE),
         _mkw('spam', 1, lp.PosTag.NOUN, lp.SyntLink.COMPOUND),
         _mkw('filter', -3, lp.PosTag.NOUN, lp.SyntLink.NMOD),
-        _mkw('other', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
+        _mkw('blocker', -1, lp.PosTag.NOUN, lp.SyntLink.CONJ),
     ]
-    doc_obj = lp_doc.Doc('id', sents=[lp_doc.Sent(words)])
 
-    add_phrases_to_doc(doc_obj, 6, min_cnt=0)
+    sent = lp_doc.Sent(words)
+    phrases = dispatch_phrase_building('noun_phrases', sent, 6)
 
-    sent0 = doc_obj[0]
-    str_phrases = [p.get_str_repr() for p in sent0.phrases()]
+    str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert len(str_phrases) == 3
-    assert str_phrases == ['Root of other', 'Root of spam filter', 'spam filter']
+    assert len(str_phrases) == 4
+    assert str_phrases == [
+        'Root of spam blocker',
+        'Root of spam filter',
+        'spam blocker',
+        'spam filter',
+    ]
