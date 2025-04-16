@@ -644,12 +644,10 @@ def test_dispatcher_vp_1():
     ]
     sent = lp_doc.Sent(words)
     phrases = dispatch_phrase_building('verb+noun_phrases', sent, 4)
-    # TODO should be 3?
-    # v1 h2 missing
-    assert len(phrases) == 2
+    assert len(phrases) == 3
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
-    assert str_phrases == ['amod n1', 'v1 amod n1']
+    assert str_phrases == ['amod n1', 'v1 amod n1', 'v1 n1']
 
 
 def test_dispatcher_vp_2():
@@ -678,14 +676,18 @@ def test_dispatcher_vp_conj_1():
     str_phrases = [p.get_str_repr() for p in phrases]
     str_phrases.sort()
     print(str_phrases)
-    assert len(str_phrases) == 6
+    assert len(str_phrases) == 10
     assert str_phrases == [
         'amod n1',
         'amod n2',
         'v1 amod n1',
         'v1 amod n2',
+        'v1 n1',
+        'v1 n2',
         'v2 amod n1',
         'v2 amod n2',
+        'v2 n1',
+        'v2 n2',
     ]
 
 

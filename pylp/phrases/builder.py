@@ -250,11 +250,16 @@ class BasicPhraseBuilder:
         try:
             cur_word_index = [[] for _ in range(self._max_n)]
             words_index[pos] = cur_word_index
+            add_word_as_phrase = True
             if self._init_phrases and (word_init_phrases := self._init_phrases[pos]):
                 # Fill index for this word from init phrases.
                 for phrase in word_init_phrases:
                     cur_word_index[min(phrase.size() - 1, self._max_n - 1)].append(phrase)
-            else:
+                    # If this is MWE do not add this word to index
+                    if phrase.phrase_type == PhraseType.MWE:
+                        add_word_as_phrase = False
+
+            if add_word_as_phrase:
                 phrase = Phrase.from_word(pos, word_obj)
                 phrase.phrase_type = self._opts.def_phrase_type
                 # init words_index's level 0
@@ -435,7 +440,6 @@ class BasicPhraseBuilder:
                 continue
 
             yield from mod_phrases[level]
-
 
     def _generate_phrases_for_level(self, level, head_pos, aux_indices, sent, phrases_cache):
         mods_index = aux_indices.mods_index[head_pos]
