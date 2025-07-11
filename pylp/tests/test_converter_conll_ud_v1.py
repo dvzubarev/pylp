@@ -396,3 +396,33 @@ def test_tokens_with_spaces_2():
     assert word3.len == 8
     assert word3.offset == 10
     assert TEXT_8_2[word3.offset : word3.offset + word3.len] == ']. \n 0=0'
+
+
+TEXT_8_3 = "000–22  000 мм\nосадков 22 000."
+CONLLU_TEXT_8_3 = r"""# text = 000–22 000 мм осадков.
+13	000	000	NUM	_	_	12	nummod	_	SpaceAfter=No
+14	–	–	PUNCT	_	_	12	punct	_	SpaceAfter=No
+15	22 000	22 000	NUM	_	_	16	nummod	_	SpacesInToken=22\s\s000
+16	мм	миллиметр	NOUN	_	Animacy=Inan|Case=Gen|Gender=Masc|Number=Sing	11	nsubj	_	SpacesAfter=\n
+17	осадков	осадки	NOUN	_	Animacy=Inan|Case=Gen|Gender=Masc|Number=Plur	16	nmod	_	SpaceAfter=No
+18	22 000	22 000	NUM	_	_	16	nummod	_	SpaceAfter=No
+19	.	.	PUNCT	_	_	1	punct	_	SpacesAfter=\n
+
+"""
+
+
+def test_tokens_with_spaces_3():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('11')
+
+    converter(TEXT_8_3, CONLLU_TEXT_8_3, doc_obj)
+    print(doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word3 = sent1[2]
+    assert word3.form == '22 000'
+    assert word3.offset == 4
+    assert word3.len == 7
+
+    assert TEXT_8_3[word3.offset : word3.offset + word3.len] == '22  000'

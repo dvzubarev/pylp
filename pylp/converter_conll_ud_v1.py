@@ -213,29 +213,28 @@ class ConverterConllUDV1:
 
     def _offset_gen(self, text: str):
         def _special_cases(form, cur_pos):
-            if ' ' in form:
-                # special case when space is in a token
-                # there may be multiple spaces or newlines in a text
-                # But they are replaced with a single space in a form of a token
-                form_reg = re.compile(form.replace(' ', r'\s+'))
-                if (match := form_reg.search(text, cur_pos)) is not None:
-                    idx = match.start()
-                    length = len(match.group())
-                    return idx, length
+            # special case when space is in a token
+            # there may be multiple spaces or newlines in a text
+            # But they are replaced with a single space in a form of a token
+            form_reg = re.compile(form.replace(' ', r'\s+'))
+            if (match := form_reg.search(text, cur_pos)) is not None:
+                idx = match.start()
+                length = len(match.group())
+                return idx, length
             return -1, -1
 
         form = yield None, None
         cur_pos = 0
         while cur_pos < len(text):
-            idx = text.find(form, cur_pos)
-            if idx == -1:
+            if ' ' in form:
                 idx, length = _special_cases(form, cur_pos)
-                if idx == -1:
-                    raise RuntimeError(
-                        f"Failed to find form {form} in text: {text[cur_pos: cur_pos+50]}"
-                    )
             else:
+                idx = text.find(form, cur_pos)
                 length = len(form)
+            if idx == -1:
+                raise RuntimeError(
+                    f"Failed to find form {form} in text: {text[cur_pos: cur_pos+50]}"
+                )
             cur_pos = idx + length
             form = yield idx, length
 
