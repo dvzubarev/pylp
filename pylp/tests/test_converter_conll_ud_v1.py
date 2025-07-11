@@ -426,3 +426,29 @@ def test_tokens_with_spaces_3():
     assert word3.len == 7
 
     assert TEXT_8_3[word3.offset : word3.offset + word3.len] == '22  000'
+
+
+TEXT_8_4 = "temp ln[1  0,3."
+CONLLU_TEXT_8_4 = r"""# text = temp ln[1 0,3.
+16	temp	temp	NOUN	_	_	11	nsubj	_	SpacesAfter=\n
+17	ln[1 0,3	ln[1 0,3	NOUN	_	_	16	nmod	_	SpaceAfter=No
+19	.	.	PUNCT	_	_	1	punct	_	SpacesAfter=\n
+
+"""
+
+
+def test_tokens_with_spaces_4():
+    converter = ConverterConllUDV1()
+    doc_obj = lp_doc.Doc('12')
+
+    converter(TEXT_8_4, CONLLU_TEXT_8_4, doc_obj)
+    print(doc_obj)
+    assert len(doc_obj) == 1
+
+    sent1 = doc_obj[0]
+    word3 = sent1[1]
+    assert word3.form == 'ln[1 0,3'
+    assert word3.offset == 5
+    assert word3.len == 9
+
+    assert TEXT_8_4[word3.offset : word3.offset + word3.len] == 'ln[1  0,3'

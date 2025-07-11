@@ -216,7 +216,7 @@ class ConverterConllUDV1:
             # special case when space is in a token
             # there may be multiple spaces or newlines in a text
             # But they are replaced with a single space in a form of a token
-            form_reg = re.compile(form.replace(' ', r'\s+'))
+            form_reg = re.compile(re.escape(form).replace(r'\ ', r'\s+'))
             if (match := form_reg.search(text, cur_pos)) is not None:
                 idx = match.start()
                 length = len(match.group())
