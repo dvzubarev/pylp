@@ -41,7 +41,7 @@ def add_phrases_to_doc(
     min_cnt: int = 0,
     profile_name: str = '',
     profile_args: PhraseBuilderProfileArgs = PhraseBuilderProfileArgs(),
-    builder_opts=None,
+    builder_opts: PhraseBuilderOpts | None = None,
     builder_cls=PhraseBuilder,
 ):
     """Pass either profile_name or builder_opts. If profile_name is not empty
@@ -64,8 +64,7 @@ def add_phrases_to_doc(
                 builder_cls=builder_cls,
             )
             sent.set_phrases(phrases)
-    else:
-        builder_opts = PhraseBuilderOpts()
+    elif builder_opts is not None:
         builder: BasicPhraseBuilder = builder_cls(phrases_max_n, builder_opts)
         for sent in doc_obj:
             phrases = builder.build_phrases_for_sent(sent)
